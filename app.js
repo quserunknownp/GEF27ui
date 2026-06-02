@@ -351,10 +351,9 @@ setInterval(() => {
 
             // gpsChart.update()는 하단에서 일괄 처리
 
-            // Speed Heatmap 업데이트 (미터 환산 완료된 좌표 사용)
-            // Baja 최고속도(약 72km/h)에 맞춰 색상 그라데이션 스케일을 75km/h로 조정
-            let t = Math.max(0, Math.min(1, latestData.speed / 75.0));
-            t = t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
+            // Heatmap color scale: 0 -> Blue, 85 -> Red
+            let t = Math.max(0, Math.min(1, latestData.speed / 85.0));
+            t = Math.pow(t, 3.0);
             
             let hue = 240 - t * 240;
             const color = `hsl(${hue}, 100%, 50%)`;
