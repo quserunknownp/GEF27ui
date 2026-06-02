@@ -64,6 +64,24 @@ const speedChart = new Chart(ctxSpeed, {
     }
 });
 
+// ----------------------------------------------------
+// 무한 스크롤(Time-series Flow) 전역 변수 및 렌더링 루프
+// ----------------------------------------------------
+let latestRpm = 0;
+let latestSpeed = 0;
+
+setInterval(() => {
+    // RPM 갱신
+    rpmChart.data.datasets[0].data.push(latestRpm);
+    rpmChart.data.datasets[0].data.shift();
+    rpmChart.update('none'); // 깜빡임 방지
+
+    // Speed 갱신
+    speedChart.data.datasets[0].data.push(latestSpeed);
+    speedChart.data.datasets[0].data.shift();
+    speedChart.update('none');
+}, 100);
+
 // WebSocket Connection Logic
 const WS_URL = 'wss://gef27test.store/ws?token=GBungE-FSAE-token';
 const statusBadge = document.getElementById('connection-status');
@@ -84,11 +102,16 @@ function connectWebSocket() {
         try {
             const data = JSON.parse(event.data);
             
-            // --- Update RPM ---
+            // 데이터 수신 시 가장 최신 값을 전역 변수에 저장 (렌더링 루프가 가져가도록)
+            latestRpm = data.rpm;
+            latestSpeed = data.speed;
+            
+            // 텍스트는 즉시 업데이트
             const rpmEl = document.getElementById('rpm-value');
             rpmEl.textContent = data.rpm;
+            document.getElementById('speed-value').textContent = data.speed;
             
-            // Danger Zone Styling
+            // Danger Zone Styling (RPM 10000 이상일 때 색상 변경)
             if(data.rpm > 10000) {
                 rpmEl.style.color = '#f43f5e';
                 rpmEl.style.textShadow = '0 0 30px rgba(244, 63, 94, 0.6)';
@@ -100,18 +123,6 @@ function connectWebSocket() {
                 rpmChart.data.datasets[0].borderColor = '#38bdf8';
                 rpmChart.data.datasets[0].backgroundColor = 'rgba(56, 189, 248, 0.1)';
             }
-
-            rpmChart.data.datasets[0].data.shift();
-            rpmChart.data.datasets[0].data.push(data.rpm);
-            rpmChart.update();
-
-            // --- Update Speed ---
-            document.getElementById('speed-value').textContent = data.speed;
-            
-            speedChart.data.datasets[0].data.shift();
-            speedChart.data.datasets[0].data.push(data.speed);
-            speedChart.update();
-
         } catch (e) {
             console.error("Error parsing message: ", e);
         }
