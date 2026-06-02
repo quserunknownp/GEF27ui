@@ -183,6 +183,18 @@ setInterval(() => {
         document.getElementById('gg-lat-value').textContent = emaAy.toFixed(2);
         document.getElementById('gg-lon-value').textContent = emaAx.toFixed(2);
         
+        // Thermals & Battery
+        if(latestData.motor_temp !== undefined) {
+            document.getElementById('motor-temp-value').textContent = latestData.motor_temp.toFixed(1);
+            document.getElementById('inv-temp-value').textContent = latestData.inverter_temp.toFixed(1);
+        }
+        if(latestData.battery_temp !== undefined) {
+            document.getElementById('batt-temp-value').textContent = latestData.battery_temp.toFixed(1);
+        }
+        if(latestData.soc !== undefined && document.getElementById('soc-value')) {
+            document.getElementById('soc-value').textContent = latestData.soc.toFixed(1);
+        }
+
         // Heatmap digital value
         if (document.getElementById('heatmap-speed-value')) {
             document.getElementById('heatmap-speed-value').textContent = latestData.speed.toFixed(1);

@@ -51,11 +51,14 @@
             <!-- Motor Panel -->
             <div class="glass-panel main-gauge">
                 <div class="panel-header">
-                    <h2 style="color: #a855f7;">MOTOR CURRENT (Id, Iq)</h2>
+                    <h2 style="color: #a855f7;">MOTOR CURRENT & TEMP</h2>
                 </div>
-                <div class="value-container">
-                    <span class="unit" style="color: #c084fc;">Id</span> <span id="id-value" class="digital-value" style="font-size:2.5rem; color:#c084fc; text-shadow: none;">0</span>
-                    <span class="unit" style="margin-left:20px; color: #f472b6;">Iq</span> <span id="iq-value" class="digital-value" style="font-size:2.5rem; color:#f472b6; text-shadow: none;">0</span>
+                <div class="value-container" style="flex-wrap: wrap;">
+                    <span class="unit" style="color: #c084fc;">Id</span> <span id="id-value" class="digital-value" style="font-size:2rem; color:#c084fc; text-shadow: none;">0</span>
+                    <span class="unit" style="margin-left:15px; color: #f472b6;">Iq</span> <span id="iq-value" class="digital-value" style="font-size:2rem; color:#f472b6; text-shadow: none;">0</span>
+                    <div style="width: 100%; height: 5px;"></div>
+                    <span class="unit" style="color: #ef4444;">Mot</span> <span id="motor-temp-value" class="digital-value" style="font-size:1.5rem; color:#ef4444; text-shadow: none;">0</span> <span class="unit">°C</span>
+                    <span class="unit" style="margin-left:15px; color: #f97316;">Inv</span> <span id="inv-temp-value" class="digital-value" style="font-size:1.5rem; color:#f97316; text-shadow: none;">0</span> <span class="unit">°C</span>
                 </div>
                 <div class="chart-wrapper">
                     <canvas id="motorChart"></canvas>
@@ -65,11 +68,14 @@
             <!-- Voltage Panel -->
             <div class="glass-panel main-gauge">
                 <div class="panel-header">
-                    <h2 style="color: #eab308;">BATTERY VOLTAGE</h2>
+                    <h2 style="color: #eab308;">BATTERY STATUS</h2>
                 </div>
-                <div class="value-container">
+                <div class="value-container" style="flex-wrap: wrap;">
                     <span id="v-value" class="digital-value" style="color: #facc15; text-shadow: 0 0 30px rgba(250, 204, 21, 0.4);">0</span>
                     <span class="unit">V</span>
+                    <span class="unit" style="margin-left:20px;">SOC</span> <span id="soc-value" class="digital-value" style="font-size:2rem; text-shadow: none;">0</span> <span class="unit">%</span>
+                    <div style="width: 100%; height: 5px;"></div>
+                    <span class="unit" style="color: #ef4444;">Temp</span> <span id="batt-temp-value" class="digital-value" style="font-size:1.5rem; color:#ef4444; text-shadow: none;">0</span> <span class="unit">°C</span>
                 </div>
                 <div class="chart-wrapper">
                     <canvas id="voltageChart"></canvas>
