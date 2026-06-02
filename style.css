@@ -34,7 +34,7 @@ body {
 
 .dashboard-container {
     width: 100%;
-    max-width: 1400px;
+    max-width: 1800px;
     padding: 2rem;
     display: flex;
     flex-direction: column;
@@ -112,7 +112,7 @@ body {
 /* Grid Layout */
 .grid-layout {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
     gap: 2rem;
 }
 

@@ -5,7 +5,12 @@ document.querySelectorAll('.tab-btn').forEach(button => {
         document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
         
         button.classList.add('active');
-        document.getElementById(button.dataset.target).classList.add('active');
+        const target = button.dataset.target;
+        if(target === 'all') {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('active'));
+        } else {
+            document.getElementById(target).classList.add('active');
+        }
     });
 });
 
@@ -199,7 +204,7 @@ let emaAx = 0, emaAy = 0, emaAz = 9.81;
 let emaDx = 0, emaDy = 1;
 let last_x_meters = 0, last_y_meters = 0;
 
-// 10Hz (100ms) 렌더링 루프 - 버퍼에서 하나씩 꺼내서 그린다!
+// 50Hz (20ms) 렌더링 루프 - 버퍼에서 하나씩 꺼내서 그린다!
 setInterval(() => {
     // 큐에 데이터가 있으면 하나 꺼낸다.
     // 만약 없으면 통신 지연이 길어진 것이므로 가장 최근 값(latestData)을 그대로 유지한다.
