@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FSAE Telemetry Live</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Outfit:wght@700&display=swap" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <header class="top-bar">
+            <h1 class="logo">FSAE <span>TELEMETRY</span></h1>
+            <div id="connection-status" class="status-badge disconnected">
+                <span class="pulse-dot"></span>
+                <span class="status-text">Connecting...</span>
+            </div>
+        </header>
+
+        <main class="grid-layout">
+            <!-- RPM Panel -->
+            <div class="glass-panel main-gauge">
+                <div class="panel-header">
+                    <h2>ENGINE RPM</h2>
+                </div>
+                <div class="value-container">
+                    <span id="rpm-value" class="digital-value">0</span>
+                    <span class="unit">RPM</span>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="rpmChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Speed Panel -->
+            <div class="glass-panel main-gauge">
+                <div class="panel-header">
+                    <h2>VEHICLE SPEED</h2>
+                </div>
+                <div class="value-container speed-container">
+                    <span id="speed-value" class="digital-value">0</span>
+                    <span class="unit">KM/H</span>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="speedChart"></canvas>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom App Logic -->
+    <script src="app.js"></script>
+</body>
+</html>
