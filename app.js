@@ -224,7 +224,7 @@ let lastTimestamp = 0;
 
 let renderCounter = 0;
 
-// 40Hz (25ms) 렌더링 루프 - 버퍼에서 하나씩 꺼내서 그린다!
+// 20Hz (50ms) 렌더링 루프 - 버퍼에서 하나씩 꺼내서 그린다!
 setInterval(() => {
     // 큐에 데이터가 있으면 하나 꺼낸다.
     // 만약 없으면 통신 지연이 길어진 것이므로 가장 최근 값(latestData)을 그대로 유지한다.
@@ -459,9 +459,9 @@ setInterval(() => {
         focChart.data.datasets[1].data.shift();
     }
     
-    // 부하가 큰 꺾은선 차트들(Line Charts)은 10Hz(매 4번째 프레임)로 업데이트하여 브라우저 CPU/GPU 최적화
+    // 부하가 큰 꺾은선 차트들(Line Charts)은 10Hz(매 2번째 프레임)로 업데이트하여 브라우저 CPU/GPU 최적화
     renderCounter++;
-    if (renderCounter % 4 === 0) {
+    if (renderCounter % 2 === 0) {
         thermalsChart.update('none');
         rpmChart.update('none');
         speedChart.update('none');
@@ -471,7 +471,7 @@ setInterval(() => {
         focChart.update('none');
     }
 
-}, 25);
+}, 50);
 
 // ----------------------------------------------------
 // WebSocket Connection
@@ -497,6 +497,11 @@ function connectWebSocket() {
                     if (frame.rpm !== undefined) {
                         playoutQueue.push(frame);
                     }
+                }
+                
+                // 브라우저 렌더링 지연으로 큐가 무한정 쌓이는 것을 방지 (최대 20 프레임 유지)
+                if (playoutQueue.length > 20) {
+                    playoutQueue = playoutQueue.slice(playoutQueue.length - 20);
                 }
             }
         } catch (e) { console.error(e); }
