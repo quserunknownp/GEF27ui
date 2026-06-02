@@ -405,6 +405,7 @@ setInterval(() => {
     
     voltageChart.data.datasets[0].data.push(latestData.pack_voltage);
     voltageChart.data.datasets[0].data.shift();
+    voltageChart.update('none'); // 배터리 전압은 실시간 모니터링이 중요하므로 40Hz로 복구
 
     motorChart.data.datasets[0].data.push(latestData.id);
     motorChart.data.datasets[0].data.shift();
@@ -430,7 +431,6 @@ setInterval(() => {
         thermalsChart.update('none');
         rpmChart.update('none');
         speedChart.update('none');
-        voltageChart.update('none');
         motorChart.update('none');
         imuChart.update('none');
     }
