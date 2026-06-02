@@ -27,9 +27,9 @@ const ctxRpm = document.getElementById('rpmChart').getContext('2d');
 const rpmChart = new Chart(ctxRpm, {
     type: 'line',
     data: {
-        labels: Array(60).fill(''),
+        labels: Array(200).fill(''),
         datasets: [{
-            data: Array(60).fill(0),
+            data: Array(200).fill(0),
             borderColor: '#38bdf8',
             backgroundColor: 'rgba(56, 189, 248, 0.1)',
             borderWidth: 3,
@@ -48,9 +48,9 @@ const ctxSpeed = document.getElementById('speedChart').getContext('2d');
 const speedChart = new Chart(ctxSpeed, {
     type: 'line',
     data: {
-        labels: Array(60).fill(''),
+        labels: Array(200).fill(''),
         datasets: [{
-            data: Array(60).fill(0),
+            data: Array(200).fill(0),
             borderColor: '#f43f5e',
             backgroundColor: 'rgba(244, 63, 94, 0.1)',
             borderWidth: 3,
