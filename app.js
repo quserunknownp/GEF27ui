@@ -305,9 +305,10 @@ setInterval(() => {
             gpsChart.update('none');
 
             // Speed Heatmap 업데이트 (미터 환산 완료된 좌표 사용)
-            // 평균 속도 대역(중간값)의 시각적 변화를 극대화하기 위해 Smootherstep (더 강한 베지어 커브) 적용
-            let t = Math.max(0, Math.min(1, latestData.speed / 100.0));
-            t = t * t * t * (t * (t * 6.0 - 15.0) + 10.0); // Smootherstep 함수
+            // 차속 범위가 좁아도(예: 40~60) 색상 대비가 극적으로 일어나도록 아주 가파른 Logistic Sigmoid 함수 적용
+            // Sigmoid: 1 / (1 + e^-k(x - x0))
+            let x = latestData.speed / 100.0;
+            let t = 1.0 / (1.0 + Math.exp(-25.0 * (x - 0.5)));
             
             let hue = 240 - t * 240;
             const color = `hsl(${hue}, 100%, 50%)`;
