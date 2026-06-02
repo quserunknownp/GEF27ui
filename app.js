@@ -1,3 +1,14 @@
+// UI Tab Switching Logic
+document.querySelectorAll('.tab-btn').forEach(button => {
+    button.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        
+        button.classList.add('active');
+        document.getElementById(button.dataset.target).classList.add('active');
+    });
+});
+
 // Chart Configuration
 Chart.defaults.color = '#94a3b8';
 Chart.defaults.font.family = "'Inter', sans-serif";
@@ -147,8 +158,29 @@ const heatmapChart = new Chart(document.getElementById('heatmapChart').getContex
         responsive: true, maintainAspectRatio: false, animation: false,
         plugins: { legend: { display: false } },
         scales: {
-            x: { grid: { color: 'rgba(255,255,255,0.05)' }, type: 'linear', position: 'center', min: -600, max: 600 },
-            y: { grid: { color: 'rgba(255,255,255,0.05)' }, type: 'linear', position: 'center', min: -600, max: 600 }
+            x: { type: 'linear', position: 'bottom', display: true, min: -600, max: 600, grid: { color: 'rgba(255,255,255,0.05)' } },
+            y: { type: 'linear', display: true, min: -600, max: 600, grid: { color: 'rgba(255,255,255,0.05)' } }
+        }
+    }
+});
+
+// 8. Thermal History Chart (Multi-line)
+const thermalsChart = new Chart(document.getElementById('thermalsChart').getContext('2d'), {
+    type: 'line',
+    data: {
+        labels: [],
+        datasets: [
+            { label: 'Motor Temp (°C)', data: [], borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', tension: 0.4, pointRadius: 0, borderWidth: 2, fill: true },
+            { label: 'Inverter Temp (°C)', data: [], borderColor: '#f97316', backgroundColor: 'rgba(249, 115, 22, 0.1)', tension: 0.4, pointRadius: 0, borderWidth: 2, fill: true },
+            { label: 'Battery Temp (°C)', data: [], borderColor: '#38bdf8', backgroundColor: 'rgba(56, 189, 248, 0.1)', tension: 0.4, pointRadius: 0, borderWidth: 2, fill: true }
+        ]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: { legend: { display: true, position: 'top', labels: { color: '#f8fafc', font: {size: 14} } } },
+        scales: {
+            x: { display: false },
+            y: { grid: { color: 'rgba(255,255,255,0.05)' }, min: 20, max: 100 }
         }
     }
 });
@@ -291,6 +323,23 @@ setInterval(() => {
             heatmapChart.data.datasets[1].backgroundColor = color; // 현재 속도 색상 반영
 
             heatmapChart.update('none');
+        }
+
+        // Thermal History Chart 업데이트
+        if(latestData.motor_temp !== undefined) {
+            const labels = thermalsChart.data.labels;
+            labels.push('');
+            thermalsChart.data.datasets[0].data.push(latestData.motor_temp);
+            thermalsChart.data.datasets[1].data.push(latestData.inverter_temp);
+            thermalsChart.data.datasets[2].data.push(latestData.battery_temp);
+            
+            if(labels.length > 500) { // 약 50초 분량 히스토리
+                labels.shift();
+                thermalsChart.data.datasets[0].data.shift();
+                thermalsChart.data.datasets[1].data.shift();
+                thermalsChart.data.datasets[2].data.shift();
+            }
+            thermalsChart.update('none');
         }
 
         // G-G Diagram 캔버스 업데이트 (X = 측면가속도 Ay, Y = 종방향가속도 Ax)
