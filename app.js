@@ -65,7 +65,7 @@ const speedChart = new Chart(ctxSpeed, {
 });
 
 // WebSocket Connection Logic
-const WS_URL = 'wss://gef27test.store/ws?token=FSAE-SECRET-2026';
+const WS_URL = 'wss://gef27test.store/ws?token=GBungE-FSAE-token';
 const statusBadge = document.getElementById('connection-status');
 const statusText = statusBadge.querySelector('.status-text');
 let ws;
