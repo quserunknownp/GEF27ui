@@ -163,8 +163,8 @@ const heatmapChart = new Chart(document.getElementById('heatmapChart').getContex
         responsive: true, maintainAspectRatio: false, animation: false,
         plugins: { legend: { display: false } },
         scales: {
-            x: { type: 'linear', position: 'bottom', display: true, min: -600, max: 600, grid: { color: 'rgba(255,255,255,0.05)' } },
-            y: { type: 'linear', display: true, min: -600, max: 600, grid: { color: 'rgba(255,255,255,0.05)' } }
+            x: { type: 'linear', position: 'bottom', display: true, min: -300, max: 300, grid: { color: 'rgba(255,255,255,0.05)' } },
+            y: { type: 'linear', display: true, min: -250, max: 250, grid: { color: 'rgba(255,255,255,0.05)' } }
         }
     }
 });
@@ -352,8 +352,8 @@ setInterval(() => {
             // gpsChart.update()는 하단에서 일괄 처리
 
             // Speed Heatmap 업데이트 (미터 환산 완료된 좌표 사용)
-            // 원래 요청하신 대로 0~100km/h 기반의 절대 색상(Smootherstep)으로 복원
-            let t = Math.max(0, Math.min(1, latestData.speed / 100.0));
+            // Baja 최고속도(약 72km/h)에 맞춰 색상 그라데이션 스케일을 75km/h로 조정
+            let t = Math.max(0, Math.min(1, latestData.speed / 75.0));
             t = t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
             
             let hue = 240 - t * 240;
