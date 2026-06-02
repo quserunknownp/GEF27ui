@@ -131,6 +131,11 @@ body {
     overflow: hidden;
 }
 
+.full-width {
+    grid-column: 1 / -1;
+    min-height: 500px;
+}
+
 .panel-header h2 {
     font-size: 1.1rem;
     color: var(--text-muted);

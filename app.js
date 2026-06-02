@@ -113,6 +113,27 @@ const ggChart = new Chart(document.getElementById('ggChart').getContext('2d'), {
     }
 });
 
+// 7. Steering Angle Heatmap
+const heatmapChart = new Chart(document.getElementById('heatmapChart').getContext('2d'), {
+    type: 'scatter',
+    data: {
+        datasets: [{
+            label: 'Steering Heatmap',
+            data: [],
+            backgroundColor: [], // Color will be updated dynamically per point
+            pointRadius: 4,
+            borderWidth: 0
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { grid: { color: 'rgba(255,255,255,0.05)' }, type: 'linear', position: 'bottom' },
+            y: { grid: { color: 'rgba(255,255,255,0.05)' } }
+        }
+    }
+});
 
 // ----------------------------------------------------
 // 재생 큐 (Playout Queue) 및 상태 변수
@@ -149,6 +170,7 @@ setInterval(() => {
         document.getElementById('lon-value').textContent = latestData.gps1_lon.toFixed(5);
         document.getElementById('gg-lat-value').textContent = emaAy.toFixed(2);
         document.getElementById('gg-lon-value').textContent = emaAx.toFixed(2);
+        document.getElementById('steering-value').textContent = latestData.steering_angle.toFixed(1);
 
         // GPS 궤적 캔버스 업데이트 (GPS1과 GPS2를 잇는 벡터 표현)
         if(latestData.gps1_lat && latestData.gps1_lon && latestData.gps2_lat && latestData.gps2_lon) {
@@ -162,6 +184,24 @@ setInterval(() => {
                 {x: latestData.gps2_lon, y: latestData.gps2_lat}  // 차량 후면 (Red)
             ];
             gpsChart.update('none');
+
+            // Steering Heatmap 업데이트
+            // Hue mapping: 좌회전(-45) -> Blue(240), 직진(0) -> Green(120), 우회전(+45) -> Red(0)
+            let hue = 120 - (latestData.steering_angle / 45.0) * 120;
+            hue = Math.max(0, Math.min(240, hue));
+            const color = `hsl(${hue}, 100%, 50%)`;
+
+            const hmData = heatmapChart.data.datasets[0].data;
+            const hmColors = heatmapChart.data.datasets[0].backgroundColor;
+            
+            hmData.push({x: latestData.gps1_lon, y: latestData.gps1_lat});
+            hmColors.push(color);
+            
+            if(hmData.length > 50000) {
+                hmData.shift();
+                hmColors.shift();
+            }
+            heatmapChart.update('none');
         }
 
         // G-G Diagram 캔버스 업데이트 (X = 측면가속도 Ay, Y = 종방향가속도 Ax)
