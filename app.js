@@ -107,8 +107,8 @@ const ggChart = new Chart(document.getElementById('ggChart').getContext('2d'), {
         responsive: true, maintainAspectRatio: false, animation: false,
         plugins: { legend: { display: false } },
         scales: {
-            x: { grid: { color: 'rgba(255,255,255,0.1)' }, type: 'linear', position: 'center', min: -15, max: 15 },
-            y: { grid: { color: 'rgba(255,255,255,0.1)' }, type: 'linear', position: 'center', min: -15, max: 15 }
+            x: { grid: { color: 'rgba(255,255,255,0.1)' }, type: 'linear', position: 'center', min: -5, max: 5 },
+            y: { grid: { color: 'rgba(255,255,255,0.1)' }, type: 'linear', position: 'center', min: -5, max: 5 }
         }
     }
 });
@@ -129,8 +129,8 @@ const heatmapChart = new Chart(document.getElementById('heatmapChart').getContex
         responsive: true, maintainAspectRatio: false, animation: false,
         plugins: { legend: { display: false } },
         scales: {
-            x: { grid: { color: 'rgba(255,255,255,0.05)' }, type: 'linear', position: 'bottom' },
-            y: { grid: { color: 'rgba(255,255,255,0.05)' } }
+            x: { grid: { color: 'rgba(255,255,255,0.05)' }, type: 'linear', position: 'center', min: -150, max: 150 },
+            y: { grid: { color: 'rgba(255,255,255,0.05)' }, type: 'linear', position: 'center', min: -150, max: 150 }
         }
     }
 });
@@ -178,15 +178,24 @@ setInterval(() => {
             history.push({x: latestData.gps1_lon, y: latestData.gps1_lat}); // 궤적은 기준점(GPS1)을 따라감
             if(history.length > 50000) history.shift(); 
             
-            // 데이터셋에 두 점(GPS1, GPS2)을 넣어 선(벡터)으로 연결
+            const dx = latestData.gps1_lon - latestData.gps2_lon;
+            const dy = latestData.gps1_lat - latestData.gps2_lat;
+            const angle = Math.atan2(dx, dy) * 180 / Math.PI; // 북쪽이 0도, 시계방향 회전
+
             gpsChart.data.datasets[1].data = [
                 {x: latestData.gps1_lon, y: latestData.gps1_lat}, // 차량 전면 (Green)
                 {x: latestData.gps2_lon, y: latestData.gps2_lat}  // 차량 후면 (Red)
             ];
+            gpsChart.data.datasets[1].pointStyle = ['triangle', 'circle'];
+            gpsChart.data.datasets[1].rotation = [angle, 0];
             gpsChart.update('none');
 
-            // Steering Heatmap 업데이트
-            // Hue mapping: 좌회전(-45) -> Blue(240), 직진(0) -> Green(120), 우회전(+45) -> Red(0)
+            // Steering Heatmap 업데이트 (미터 환산)
+            const BASE_LAT = 37.5665;
+            const BASE_LON = 126.9780;
+            const x_meters = (latestData.gps1_lon - BASE_LON) * 88000;
+            const y_meters = (latestData.gps1_lat - BASE_LAT) * 111000;
+
             let hue = 120 - (latestData.steering_angle / 45.0) * 120;
             hue = Math.max(0, Math.min(240, hue));
             const color = `hsl(${hue}, 100%, 50%)`;
@@ -194,7 +203,7 @@ setInterval(() => {
             const hmData = heatmapChart.data.datasets[0].data;
             const hmColors = heatmapChart.data.datasets[0].backgroundColor;
             
-            hmData.push({x: latestData.gps1_lon, y: latestData.gps1_lat});
+            hmData.push({x: x_meters, y: y_meters});
             hmColors.push(color);
             
             if(hmData.length > 50000) {
