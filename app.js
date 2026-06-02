@@ -204,7 +204,11 @@ let emaAx = 0, emaAy = 0, emaAz = 9.81;
 let emaDx = 0, emaDy = 1;
 let last_x_meters = 0, last_y_meters = 0;
 
-// 50Hz (20ms) 렌더링 루프 - 버퍼에서 하나씩 꺼내서 그린다!
+// Complementary Filter Variables
+let currentHeading = null;
+let lastTimestamp = 0;
+
+// 40Hz (25ms) 렌더링 루프 - 버퍼에서 하나씩 꺼내서 그린다!
 setInterval(() => {
     // 큐에 데이터가 있으면 하나 꺼낸다.
     // 만약 없으면 통신 지연이 길어진 것이므로 가장 최근 값(latestData)을 그대로 유지한다.
@@ -254,22 +258,44 @@ setInterval(() => {
             const BASE_LON = 126.9780;
             const x_meters = (latestData.gps1_lon - BASE_LON) * 88000;
             const y_meters = (latestData.gps1_lat - BASE_LAT) * 111000;
+            const x2_meters = (latestData.gps2_lon - BASE_LON) * 88000;
+            const y2_meters = (latestData.gps2_lat - BASE_LAT) * 111000;
 
             const history = gpsChart.data.datasets[0].data;
             history.push({x: x_meters, y: y_meters});
             if(history.length > 2000) history.shift(); 
             
-            // EMA for Heading Vector
-            if(last_x_meters !== 0) {
-                const dx = x_meters - last_x_meters;
-                const dy = y_meters - last_y_meters;
-                emaDx = (alpha * dx) + ((1 - alpha) * emaDx);
-                emaDy = (alpha * dy) + ((1 - alpha) * emaDy);
+            // Dual-GPS를 이용한 절대 방위각 계산 (노이즈 포함됨)
+            const dualGpsDx = x_meters - x2_meters;
+            const dualGpsDy = y_meters - y2_meters;
+            let rawDualGpsHeading = Math.atan2(dualGpsDx, dualGpsDy) * 180 / Math.PI; // North=0
+
+            // Causal 상보 필터 (Complementary Filter): Gyro Z (Yaw Rate) + Dual-GPS
+            if (currentHeading === null) {
+                currentHeading = rawDualGpsHeading;
+                lastTimestamp = latestData.timestamp;
+            } else {
+                const dt = (latestData.timestamp - lastTimestamp) / 1000.0 || 0.025;
+                const gyroYawRate = latestData.gz || 0; // dps
+                
+                // Wrap-around angle difference calculation (-180 to 180)
+                let angleDiff = rawDualGpsHeading - currentHeading;
+                if (angleDiff > 180) angleDiff -= 360;
+                if (angleDiff < -180) angleDiff += 360;
+                
+                // Complementary Filter (98% Gyro + 2% GPS drift correction)
+                // Gyro는 단기적인 진동이 없고 즉각적인 회전을 정확히 잡아내지만, 장기적으로 누적 오차(Drift) 발생
+                // GPS는 단기적으로 심하게 흔들리지만, 장기적으로 절대 방향을 보장함
+                currentHeading = currentHeading + (gyroYawRate * dt);
+                currentHeading = currentHeading + (0.02 * angleDiff);
+                
+                if (currentHeading > 180) currentHeading -= 360;
+                if (currentHeading < -180) currentHeading += 360;
+                
+                lastTimestamp = latestData.timestamp;
             }
-            last_x_meters = x_meters;
-            last_y_meters = y_meters;
-            
-            const headingAngle = Math.atan2(emaDx, emaDy) * 180 / Math.PI; // North=0
+
+            const headingAngle = currentHeading;
 
             // Current Car Heading Vector (Blue Line) - 정확히 15미터 길이 고정
             const headingRad = headingAngle * Math.PI / 180;
@@ -404,7 +430,7 @@ setInterval(() => {
     imuChart.data.datasets[5].data.shift();
     imuChart.update('none');
 
-}, 100);
+}, 25);
 
 // ----------------------------------------------------
 // WebSocket Connection
