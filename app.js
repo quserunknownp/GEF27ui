@@ -60,12 +60,14 @@ const gpsChart = new Chart(document.getElementById('gpsChart').getContext('2d'),
                 borderWidth: 0
             },
             {
-                label: 'Current Position',
+                label: 'Current Vector',
                 data: [], 
-                backgroundColor: '#10b981', // Bright green for current car
-                borderColor: '#ffffff',
-                pointRadius: 6,
-                borderWidth: 2
+                backgroundColor: '#10b981', 
+                borderColor: '#10b981',
+                showLine: true,
+                pointRadius: [5, 3], // GPS1 is larger, GPS2 is smaller
+                pointBackgroundColor: ['#10b981', '#f43f5e'], // GPS1 is green, GPS2 is red
+                borderWidth: 3
             }
         ]
     },
@@ -148,13 +150,17 @@ setInterval(() => {
         document.getElementById('gg-lat-value').textContent = emaAy.toFixed(2);
         document.getElementById('gg-lon-value').textContent = emaAx.toFixed(2);
 
-        // GPS 궤적 캔버스 업데이트
-        if(latestData.gps1_lat && latestData.gps1_lon) {
+        // GPS 궤적 캔버스 업데이트 (GPS1과 GPS2를 잇는 벡터 표현)
+        if(latestData.gps1_lat && latestData.gps1_lon && latestData.gps2_lat && latestData.gps2_lon) {
             const history = gpsChart.data.datasets[0].data;
-            history.push({x: latestData.gps1_lon, y: latestData.gps1_lat});
+            history.push({x: latestData.gps1_lon, y: latestData.gps1_lat}); // 궤적은 기준점(GPS1)을 따라감
             if(history.length > 50000) history.shift(); 
             
-            gpsChart.data.datasets[1].data = [{x: latestData.gps1_lon, y: latestData.gps1_lat}];
+            // 데이터셋에 두 점(GPS1, GPS2)을 넣어 선(벡터)으로 연결
+            gpsChart.data.datasets[1].data = [
+                {x: latestData.gps1_lon, y: latestData.gps1_lat}, // 차량 전면 (Green)
+                {x: latestData.gps2_lon, y: latestData.gps2_lat}  // 차량 후면 (Red)
+            ];
             gpsChart.update('none');
         }
 
