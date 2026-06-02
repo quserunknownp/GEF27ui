@@ -79,6 +79,38 @@ const gpsChart = new Chart(document.getElementById('gpsChart').getContext('2d'),
     }
 });
 
+// 6. G-G Diagram (Traction Circle)
+const ggChart = new Chart(document.getElementById('ggChart').getContext('2d'), {
+    type: 'scatter',
+    data: {
+        datasets: [
+            {
+                label: 'G History',
+                data: [], 
+                backgroundColor: 'rgba(59, 130, 246, 0.2)', 
+                pointRadius: 2,
+                borderWidth: 0
+            },
+            {
+                label: 'Current G',
+                data: [], 
+                backgroundColor: '#3b82f6',
+                borderColor: '#ffffff',
+                pointRadius: 6,
+                borderWidth: 2
+            }
+        ]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { grid: { color: 'rgba(255,255,255,0.1)' }, type: 'linear', position: 'center', min: -15, max: 15 },
+            y: { grid: { color: 'rgba(255,255,255,0.1)' }, type: 'linear', position: 'center', min: -15, max: 15 }
+        }
+    }
+});
+
 
 // ----------------------------------------------------
 // 재생 큐 (Playout Queue) 및 상태 변수
@@ -113,6 +145,8 @@ setInterval(() => {
         document.getElementById('az-value').textContent = emaAz.toFixed(2);
         document.getElementById('lat-value').textContent = latestData.gps1_lat.toFixed(5);
         document.getElementById('lon-value').textContent = latestData.gps1_lon.toFixed(5);
+        document.getElementById('gg-lat-value').textContent = emaAy.toFixed(2);
+        document.getElementById('gg-lon-value').textContent = emaAx.toFixed(2);
 
         // GPS 궤적 캔버스 업데이트
         if(latestData.gps1_lat && latestData.gps1_lon) {
@@ -123,6 +157,14 @@ setInterval(() => {
             gpsChart.data.datasets[1].data = [{x: latestData.gps1_lon, y: latestData.gps1_lat}];
             gpsChart.update('none');
         }
+
+        // G-G Diagram 캔버스 업데이트 (X = 측면가속도 Ay, Y = 종방향가속도 Ax)
+        const ggHistory = ggChart.data.datasets[0].data;
+        ggHistory.push({x: emaAy, y: emaAx});
+        if(ggHistory.length > 50) ggHistory.shift(); // 꼬리는 최근 50개(0.5초)만 유지
+        
+        ggChart.data.datasets[1].data = [{x: emaAy, y: emaAx}];
+        ggChart.update('none');
 
         // RPM Warning UI 업데이트
         const rpmEl = document.getElementById('rpm-value');

@@ -91,6 +91,20 @@
                 </div>
             </div>
 
+            <!-- Traction Circle (G-G Diagram) Panel -->
+            <div class="glass-panel main-gauge">
+                <div class="panel-header">
+                    <h2 style="color: #3b82f6;">TRACTION CIRCLE (G-G)</h2>
+                </div>
+                <div class="value-container" style="margin: 0.5rem 0;">
+                    <span class="unit" style="font-size:1rem;">Lat (Y):</span> <span id="gg-lat-value" class="digital-value" style="font-size:1.5rem; text-shadow:none; color:var(--text-muted);">0</span>
+                    <span class="unit" style="font-size:1rem; margin-left:10px;">Lon (X):</span> <span id="gg-lon-value" class="digital-value" style="font-size:1.5rem; text-shadow:none; color:var(--text-muted);">0</span>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="ggChart"></canvas>
+                </div>
+            </div>
+
             <!-- GPS Panel -->
             <div class="glass-panel main-gauge">
                 <div class="panel-header">
