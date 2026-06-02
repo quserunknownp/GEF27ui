@@ -60,13 +60,22 @@ const gpsChart = new Chart(document.getElementById('gpsChart').getContext('2d'),
                 borderWidth: 0
             },
             {
-                label: 'Current Vector',
+                label: 'Current Heading',
                 data: [], 
                 backgroundColor: '#10b981', 
                 borderColor: '#10b981',
+                showLine: false,
+                pointRadius: 8,
+                pointStyle: 'triangle',
+                borderWidth: 3
+            },
+            {
+                label: 'Steering Vector',
+                data: [],
+                borderColor: '#f59e0b', // Orange for steering
+                borderDash: [5, 5],
                 showLine: true,
-                pointRadius: [5, 3], // GPS1 is larger, GPS2 is smaller
-                pointBackgroundColor: ['#10b981', '#f43f5e'], // GPS1 is green, GPS2 is red
+                pointRadius: 0,
                 borderWidth: 3
             }
         ]
@@ -113,12 +122,12 @@ const ggChart = new Chart(document.getElementById('ggChart').getContext('2d'), {
     }
 });
 
-// 7. Steering Angle Heatmap
+// 7. Speed Heatmap
 const heatmapChart = new Chart(document.getElementById('heatmapChart').getContext('2d'), {
     type: 'scatter',
     data: {
         datasets: [{
-            label: 'Steering Heatmap',
+            label: 'Speed Heatmap',
             data: [],
             backgroundColor: [], // Color will be updated dynamically per point
             pointRadius: 4,
@@ -129,8 +138,8 @@ const heatmapChart = new Chart(document.getElementById('heatmapChart').getContex
         responsive: true, maintainAspectRatio: false, animation: false,
         plugins: { legend: { display: false } },
         scales: {
-            x: { grid: { color: 'rgba(255,255,255,0.05)' }, type: 'linear', position: 'center', min: -150, max: 150 },
-            y: { grid: { color: 'rgba(255,255,255,0.05)' }, type: 'linear', position: 'center', min: -150, max: 150 }
+            x: { grid: { color: 'rgba(255,255,255,0.05)' }, type: 'linear', position: 'center', min: -600, max: 600 },
+            y: { grid: { color: 'rgba(255,255,255,0.05)' }, type: 'linear', position: 'center', min: -600, max: 600 }
         }
     }
 });
@@ -144,6 +153,10 @@ let latestData = { rpm:0, speed:0, id:0, iq:0, pack_voltage:0, ax:0, ay:0, az:9.
 // Causal Filter (EMA) Variables
 const alpha = 0.15; // 0.15: 부드러움, 1.0: 원본 데이터
 let emaAx = 0, emaAy = 0, emaAz = 9.81;
+
+// GPS EMA Variables for Heading
+let emaDx = 0, emaDy = 1;
+let lastGps1Lon = 0, lastGps1Lat = 0;
 
 // 10Hz (100ms) 렌더링 루프 - 버퍼에서 하나씩 꺼내서 그린다!
 setInterval(() => {
@@ -170,33 +183,62 @@ setInterval(() => {
         document.getElementById('lon-value').textContent = latestData.gps1_lon.toFixed(5);
         document.getElementById('gg-lat-value').textContent = emaAy.toFixed(2);
         document.getElementById('gg-lon-value').textContent = emaAx.toFixed(2);
-        document.getElementById('steering-value').textContent = latestData.steering_angle.toFixed(1);
+        
+        // Heatmap digital value
+        if (document.getElementById('heatmap-speed-value')) {
+            document.getElementById('heatmap-speed-value').textContent = latestData.speed.toFixed(1);
+        }
 
-        // GPS 궤적 캔버스 업데이트 (GPS1과 GPS2를 잇는 벡터 표현)
-        if(latestData.gps1_lat && latestData.gps1_lon && latestData.gps2_lat && latestData.gps2_lon) {
+        // GPS 궤적 캔버스 업데이트 (Zoom-in 및 Steering Vector 표현)
+        if(latestData.gps1_lat && latestData.gps1_lon) {
             const history = gpsChart.data.datasets[0].data;
-            history.push({x: latestData.gps1_lon, y: latestData.gps1_lat}); // 궤적은 기준점(GPS1)을 따라감
-            if(history.length > 50000) history.shift(); 
+            history.push({x: latestData.gps1_lon, y: latestData.gps1_lat});
+            if(history.length > 2000) history.shift(); // 로컬 맵이므로 긴 꼬리 불필요
             
-            const dx = latestData.gps1_lon - latestData.gps2_lon;
-            const dy = latestData.gps1_lat - latestData.gps2_lat;
-            const angle = Math.atan2(dx, dy) * 180 / Math.PI; // 북쪽이 0도, 시계방향 회전
+            // EMA for Heading Vector
+            if(lastGps1Lon !== 0) {
+                const dx = latestData.gps1_lon - lastGps1Lon;
+                const dy = latestData.gps1_lat - lastGps1Lat;
+                emaDx = (alpha * dx) + ((1 - alpha) * emaDx);
+                emaDy = (alpha * dy) + ((1 - alpha) * emaDy);
+            }
+            lastGps1Lon = latestData.gps1_lon;
+            lastGps1Lat = latestData.gps1_lat;
+            
+            const headingAngle = Math.atan2(emaDx, emaDy) * 180 / Math.PI; // North=0
 
-            gpsChart.data.datasets[1].data = [
-                {x: latestData.gps1_lon, y: latestData.gps1_lat}, // 차량 전면 (Green)
-                {x: latestData.gps2_lon, y: latestData.gps2_lat}  // 차량 후면 (Red)
+            // Current Car Heading Triangle
+            gpsChart.data.datasets[1].data = [{x: latestData.gps1_lon, y: latestData.gps1_lat}];
+            gpsChart.data.datasets[1].rotation = headingAngle;
+
+            // Steering Vector Overlay
+            const steeringAngleDeg = headingAngle + latestData.steering_angle;
+            const steeringRad = steeringAngleDeg * Math.PI / 180;
+            const v_len = 0.00015; // 약 15m 길이 화살표
+            const steerPointX = latestData.gps1_lon + v_len * Math.sin(steeringRad);
+            const steerPointY = latestData.gps1_lat + v_len * Math.cos(steeringRad);
+            
+            gpsChart.data.datasets[2].data = [
+                {x: latestData.gps1_lon, y: latestData.gps1_lat},
+                {x: steerPointX, y: steerPointY}
             ];
-            gpsChart.data.datasets[1].pointStyle = ['triangle', 'circle'];
-            gpsChart.data.datasets[1].rotation = [angle, 0];
+
+            // Local Zoom-in Bounds (차량 반경 약 30m)
+            gpsChart.options.scales.x.min = latestData.gps1_lon - 0.0003;
+            gpsChart.options.scales.x.max = latestData.gps1_lon + 0.0003;
+            gpsChart.options.scales.y.min = latestData.gps1_lat - 0.0003;
+            gpsChart.options.scales.y.max = latestData.gps1_lat + 0.0003;
+
             gpsChart.update('none');
 
-            // Steering Heatmap 업데이트 (미터 환산)
+            // Speed Heatmap 업데이트 (미터 환산)
             const BASE_LAT = 37.5665;
             const BASE_LON = 126.9780;
             const x_meters = (latestData.gps1_lon - BASE_LON) * 88000;
             const y_meters = (latestData.gps1_lat - BASE_LAT) * 111000;
 
-            let hue = 120 - (latestData.steering_angle / 45.0) * 120;
+            // Hue mapping for speed: 0km/h -> Blue(240), 100km/h -> Red(0)
+            let hue = 240 - (latestData.speed / 100.0) * 240;
             hue = Math.max(0, Math.min(240, hue));
             const color = `hsl(${hue}, 100%, 50%)`;
 

@@ -108,7 +108,7 @@
             <!-- GPS Panel -->
             <div class="glass-panel main-gauge">
                 <div class="panel-header">
-                    <h2>GPS TRACKING</h2>
+                    <h2>LOCAL GPS (STEERING VECTOR)</h2>
                 </div>
                 <div class="value-container" style="margin: 0.5rem 0;">
                     <span class="unit" style="font-size:1rem;">Lat:</span> <span id="lat-value" class="digital-value" style="font-size:1.5rem; text-shadow:none; color:var(--text-muted);">0</span>
@@ -119,18 +119,17 @@
                 </div>
             </div>
 
-            <!-- Steering Angle Heatmap (Full Width) -->
+            <!-- Speed Heatmap (Full Width) -->
             <div class="glass-panel main-gauge full-width">
                 <div class="panel-header">
-                    <h2 style="color: #f59e0b;">STEERING ANGLE HEATMAP (CIRCUIT)</h2>
+                    <h2 style="color: #f59e0b;">SPEED HEATMAP (CIRCUIT)</h2>
                 </div>
                 <div class="value-container" style="margin: 0.5rem 0;">
-                    <span class="unit" style="font-size:1rem;">Steering Angle:</span> <span id="steering-value" class="digital-value" style="font-size:2rem; text-shadow:none; color:#f59e0b;">0</span>
-                    <span class="unit" style="font-size:1rem; margin-left:10px;">deg</span>
+                    <span class="unit" style="font-size:1rem;">Speed:</span> <span id="heatmap-speed-value" class="digital-value" style="font-size:2rem; text-shadow:none; color:#f59e0b;">0</span>
+                    <span class="unit" style="font-size:1rem; margin-left:10px;">km/h</span>
                     <span style="margin-left:auto; display:flex; align-items:center; gap:5px; font-size:0.9rem; color:var(--text-muted);">
-                        <span style="width:15px; height:15px; background:blue; border-radius:50%;"></span> Left
-                        <span style="width:15px; height:15px; background:green; border-radius:50%; margin-left:10px;"></span> Straight
-                        <span style="width:15px; height:15px; background:red; border-radius:50%; margin-left:10px;"></span> Right
+                        <span style="width:15px; height:15px; background:blue; border-radius:50%;"></span> 0 km/h
+                        <span style="width:15px; height:15px; background:red; border-radius:50%; margin-left:10px;"></span> 100 km/h
                     </span>
                 </div>
                 <div class="chart-wrapper map-wrapper">
