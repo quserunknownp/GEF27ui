@@ -84,7 +84,7 @@ const gpsChart = new Chart(document.getElementById('gpsChart').getContext('2d'),
 // 재생 큐 (Playout Queue) 및 상태 변수
 // ----------------------------------------------------
 let playoutQueue = [];
-let latestData = { rpm:0, speed:0, id:0, iq:0, v:0, ax:0, ay:0, az:9.81, lat:0, lon:0 };
+let latestData = { rpm:0, speed:0, id:0, iq:0, pack_voltage:0, ax:0, ay:0, az:9.81, gps1_lat:0, gps1_lon:0 };
 
 // Causal Filter (EMA) Variables
 const alpha = 0.15; // 0.15: 부드러움, 1.0: 원본 데이터
@@ -107,20 +107,20 @@ setInterval(() => {
         document.getElementById('speed-value').textContent = latestData.speed;
         document.getElementById('id-value').textContent = latestData.id.toFixed(1);
         document.getElementById('iq-value').textContent = latestData.iq.toFixed(1);
-        document.getElementById('v-value').textContent = latestData.v.toFixed(1);
+        document.getElementById('v-value').textContent = latestData.pack_voltage.toFixed(1);
         document.getElementById('ax-value').textContent = emaAx.toFixed(2);
         document.getElementById('ay-value').textContent = emaAy.toFixed(2);
         document.getElementById('az-value').textContent = emaAz.toFixed(2);
-        document.getElementById('lat-value').textContent = latestData.lat.toFixed(5);
-        document.getElementById('lon-value').textContent = latestData.lon.toFixed(5);
+        document.getElementById('lat-value').textContent = latestData.gps1_lat.toFixed(5);
+        document.getElementById('lon-value').textContent = latestData.gps1_lon.toFixed(5);
 
         // GPS 궤적 캔버스 업데이트
-        if(latestData.lat && latestData.lon) {
+        if(latestData.gps1_lat && latestData.gps1_lon) {
             const history = gpsChart.data.datasets[0].data;
-            history.push({x: latestData.lon, y: latestData.lat});
+            history.push({x: latestData.gps1_lon, y: latestData.gps1_lat});
             if(history.length > 50000) history.shift(); 
             
-            gpsChart.data.datasets[1].data = [{x: latestData.lon, y: latestData.lat}];
+            gpsChart.data.datasets[1].data = [{x: latestData.gps1_lon, y: latestData.gps1_lat}];
             gpsChart.update('none');
         }
 
@@ -148,7 +148,7 @@ setInterval(() => {
     speedChart.data.datasets[0].data.shift();
     speedChart.update('none');
     
-    voltageChart.data.datasets[0].data.push(latestData.v);
+    voltageChart.data.datasets[0].data.push(latestData.pack_voltage);
     voltageChart.data.datasets[0].data.shift();
     voltageChart.update('none');
 
