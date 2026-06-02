@@ -80,17 +80,66 @@ const gpsChart = new Chart(document.getElementById('gpsChart').getContext('2d'),
 });
 
 
-// 전역 변수 모음
+// ----------------------------------------------------
+// 재생 큐 (Playout Queue) 및 상태 변수
+// ----------------------------------------------------
+let playoutQueue = [];
 let latestData = { rpm:0, speed:0, id:0, iq:0, v:0, ax:0, ay:0, az:9.81, lat:0, lon:0 };
 
 // Causal Filter (EMA) Variables
 const alpha = 0.15; // 0.15: 부드러움, 1.0: 원본 데이터
 let emaAx = 0, emaAy = 0, emaAz = 9.81;
 
+// 10Hz (100ms) 렌더링 루프 - 버퍼에서 하나씩 꺼내서 그린다!
 setInterval(() => {
-    // 실시간 차트 업데이트 루프 (100ms)
+    // 큐에 데이터가 있으면 하나 꺼낸다.
+    // 만약 없으면 통신 지연이 길어진 것이므로 가장 최근 값(latestData)을 그대로 유지한다.
+    if (playoutQueue.length > 0) {
+        latestData = playoutQueue.shift();
+        
+        // Causal Filter (EMA) 연산을 여기서 수행
+        emaAx = (alpha * latestData.ax) + ((1 - alpha) * emaAx);
+        emaAy = (alpha * latestData.ay) + ((1 - alpha) * emaAy);
+        emaAz = (alpha * latestData.az) + ((1 - alpha) * emaAz);
+
+        // UI 텍스트 즉시 업데이트
+        document.getElementById('rpm-value').textContent = latestData.rpm;
+        document.getElementById('speed-value').textContent = latestData.speed;
+        document.getElementById('id-value').textContent = latestData.id.toFixed(1);
+        document.getElementById('iq-value').textContent = latestData.iq.toFixed(1);
+        document.getElementById('v-value').textContent = latestData.v.toFixed(1);
+        document.getElementById('ax-value').textContent = emaAx.toFixed(2);
+        document.getElementById('ay-value').textContent = emaAy.toFixed(2);
+        document.getElementById('az-value').textContent = emaAz.toFixed(2);
+        document.getElementById('lat-value').textContent = latestData.lat.toFixed(5);
+        document.getElementById('lon-value').textContent = latestData.lon.toFixed(5);
+
+        // GPS 궤적 캔버스 업데이트
+        if(latestData.lat && latestData.lon) {
+            const history = gpsChart.data.datasets[0].data;
+            history.push({x: latestData.lon, y: latestData.lat});
+            if(history.length > 50000) history.shift(); 
+            
+            gpsChart.data.datasets[1].data = [{x: latestData.lon, y: latestData.lat}];
+            gpsChart.update('none');
+        }
+
+        // RPM Warning UI 업데이트
+        const rpmEl = document.getElementById('rpm-value');
+        if(latestData.rpm > 10000) {
+            rpmEl.style.color = '#f43f5e';
+            rpmEl.style.textShadow = '0 0 30px rgba(244, 63, 94, 0.6)';
+            rpmChart.data.datasets[0].borderColor = '#f43f5e';
+            rpmChart.data.datasets[0].backgroundColor = 'rgba(244, 63, 94, 0.2)';
+        } else {
+            rpmEl.style.color = '#38bdf8';
+            rpmEl.style.textShadow = '0 0 30px rgba(56, 189, 248, 0.4)';
+            rpmChart.data.datasets[0].borderColor = '#38bdf8';
+            rpmChart.data.datasets[0].backgroundColor = 'rgba(56, 189, 248, 0.1)';
+        }
+    }
     
-    // 1. 단일 데이터 차트 밀어내기
+    // 차트 밀어내기 (매 100ms마다 수행)
     rpmChart.data.datasets[0].data.push(latestData.rpm);
     rpmChart.data.datasets[0].data.shift();
     rpmChart.update('none');
@@ -103,21 +152,18 @@ setInterval(() => {
     voltageChart.data.datasets[0].data.shift();
     voltageChart.update('none');
 
-    // 2. 다중 데이터 차트 밀어내기 (Motor)
     motorChart.data.datasets[0].data.push(latestData.id);
     motorChart.data.datasets[0].data.shift();
     motorChart.data.datasets[1].data.push(latestData.iq);
     motorChart.data.datasets[1].data.shift();
     motorChart.update('none');
 
-    // 3. IMU (Filtered)
     imuChart.data.datasets[0].data.push(emaAx);
     imuChart.data.datasets[0].data.shift();
     imuChart.data.datasets[1].data.push(emaAy);
     imuChart.data.datasets[1].data.shift();
     imuChart.data.datasets[2].data.push(emaAz);
     imuChart.data.datasets[2].data.shift();
-    // 3. IMU (Raw)
     imuChart.data.datasets[3].data.push(latestData.ax);
     imuChart.data.datasets[3].data.shift();
     imuChart.data.datasets[4].data.push(latestData.ay);
@@ -128,11 +174,13 @@ setInterval(() => {
 
 }, 100);
 
+// ----------------------------------------------------
+// WebSocket Connection
+// ----------------------------------------------------
 const WS_URL = 'wss://gef27test.store/ws?token=GBungE-FSAE-token';
 const statusBadge = document.getElementById('connection-status');
 const statusText = statusBadge.querySelector('.status-text');
 let ws;
-const maxGpsPoints = 300;
 
 function connectWebSocket() {
     ws = new WebSocket(WS_URL);
@@ -144,51 +192,12 @@ function connectWebSocket() {
     ws.onmessage = (event) => {
         try {
             const data = JSON.parse(event.data);
-            if(data.rpm !== undefined) {
-                latestData = { ...latestData, ...data };
-                
-                // Causal Filter (EMA) 적용
-                emaAx = (alpha * data.ax) + ((1 - alpha) * emaAx);
-                emaAy = (alpha * data.ay) + ((1 - alpha) * emaAy);
-                emaAz = (alpha * data.az) + ((1 - alpha) * emaAz);
-
-                // UI Text 업데이트
-                document.getElementById('rpm-value').textContent = data.rpm;
-                document.getElementById('speed-value').textContent = data.speed;
-                document.getElementById('id-value').textContent = data.id.toFixed(1);
-                document.getElementById('iq-value').textContent = data.iq.toFixed(1);
-                document.getElementById('v-value').textContent = data.v.toFixed(1);
-                document.getElementById('ax-value').textContent = emaAx.toFixed(2);
-                document.getElementById('ay-value').textContent = emaAy.toFixed(2);
-                document.getElementById('az-value').textContent = emaAz.toFixed(2);
-                document.getElementById('lat-value').textContent = data.lat.toFixed(5);
-                document.getElementById('lon-value').textContent = data.lon.toFixed(5);
-
-                // GPS 궤적 업데이트 (History + Current)
-                if(data.lat && data.lon) {
-                    // 과거 궤적 누적 (흐릿하게)
-                    const history = gpsChart.data.datasets[0].data;
-                    history.push({x: data.lon, y: data.lat});
-                    if(history.length > 50000) history.shift(); // 메모리 오버플로우 방지
-                    
-                    // 현재 위치 점 (크고 선명하게)
-                    gpsChart.data.datasets[1].data = [{x: data.lon, y: data.lat}];
-                    
-                    gpsChart.update('none');
-                }
-                
-                // RPM Warning
-                const rpmEl = document.getElementById('rpm-value');
-                if(data.rpm > 10000) {
-                    rpmEl.style.color = '#f43f5e';
-                    rpmEl.style.textShadow = '0 0 30px rgba(244, 63, 94, 0.6)';
-                    rpmChart.data.datasets[0].borderColor = '#f43f5e';
-                    rpmChart.data.datasets[0].backgroundColor = 'rgba(244, 63, 94, 0.2)';
-                } else {
-                    rpmEl.style.color = '#38bdf8';
-                    rpmEl.style.textShadow = '0 0 30px rgba(56, 189, 248, 0.4)';
-                    rpmChart.data.datasets[0].borderColor = '#38bdf8';
-                    rpmChart.data.datasets[0].backgroundColor = 'rgba(56, 189, 248, 0.1)';
+            // 서버에서 배열 형태로 5개씩 던져준 프레임을 모두 큐에 넣는다
+            if(Array.isArray(data)) {
+                for (const frame of data) {
+                    if (frame.rpm !== undefined) {
+                        playoutQueue.push(frame);
+                    }
                 }
             }
         } catch (e) { console.error(e); }
