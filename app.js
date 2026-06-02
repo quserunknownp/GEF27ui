@@ -62,12 +62,11 @@ const gpsChart = new Chart(document.getElementById('gpsChart').getContext('2d'),
             {
                 label: 'Current Heading',
                 data: [], 
-                backgroundColor: '#10b981', 
-                borderColor: '#10b981',
-                showLine: false,
-                pointRadius: 8,
-                pointStyle: 'triangle',
-                borderWidth: 3
+                backgroundColor: '#3b82f6', // 파란색 
+                borderColor: '#3b82f6',
+                showLine: true,
+                pointRadius: 0,
+                borderWidth: 4
             },
             {
                 label: 'Steering Vector',
@@ -207,9 +206,19 @@ setInterval(() => {
             
             const headingAngle = Math.atan2(emaDx, emaDy) * 180 / Math.PI; // North=0
 
-            // Current Car Heading Triangle
-            gpsChart.data.datasets[1].data = [{x: latestData.gps1_lon, y: latestData.gps1_lat}];
-            gpsChart.data.datasets[1].rotation = headingAngle;
+            // Current Car Heading Vector (Blue Line)
+            const headingRad = headingAngle * Math.PI / 180;
+            const h_len = 0.00015; // 파란색 직선 (약 15m)
+            const headingPointX = latestData.gps1_lon + h_len * Math.sin(headingRad);
+            const headingPointY = latestData.gps1_lat + h_len * Math.cos(headingRad);
+
+            gpsChart.data.datasets[1].data = [
+                {x: latestData.gps1_lon, y: latestData.gps1_lat},
+                {x: headingPointX, y: headingPointY}
+            ];
+            // 삼각형 회전 대신 선을 그렸으므로 불필요한 속성 제거
+            gpsChart.data.datasets[1].pointStyle = 'circle';
+            gpsChart.data.datasets[1].rotation = 0;
 
             // Steering Vector Overlay
             const steeringAngleDeg = headingAngle + latestData.steering_angle;
