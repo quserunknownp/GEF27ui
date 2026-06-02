@@ -285,11 +285,9 @@ setInterval(() => {
                 if (angleDiff > 180) angleDiff -= 360;
                 if (angleDiff < -180) angleDiff += 360;
                 
-                // Complementary Filter (98% Gyro + 2% GPS drift correction)
-                // Gyro는 단기적인 진동이 없고 즉각적인 회전을 정확히 잡아내지만, 장기적으로 누적 오차(Drift) 발생
-                // GPS는 단기적으로 심하게 흔들리지만, 장기적으로 절대 방향을 보장함
+                // Complementary Filter (95% Gyro + 5% GPS drift correction)
                 currentHeading = currentHeading + (gyroYawRate * dt);
-                currentHeading = currentHeading + (0.02 * angleDiff);
+                currentHeading = currentHeading + (0.05 * angleDiff);
                 
                 if (currentHeading > 180) currentHeading -= 360;
                 if (currentHeading < -180) currentHeading += 360;
@@ -333,10 +331,9 @@ setInterval(() => {
             // gpsChart.update()는 하단에서 일괄 처리
 
             // Speed Heatmap 업데이트 (미터 환산 완료된 좌표 사용)
-            // 차속 범위가 좁아도(예: 40~60) 색상 대비가 극적으로 일어나도록 아주 가파른 Logistic Sigmoid 함수 적용
-            // Sigmoid: 1 / (1 + e^-k(x - x0))
+            // 차속 범위가 50~100 사이를 오가므로 75km/h(0.75)를 중심으로 Sigmoid 적용
             let x = latestData.speed / 100.0;
-            let t = 1.0 / (1.0 + Math.exp(-25.0 * (x - 0.5)));
+            let t = 1.0 / (1.0 + Math.exp(-20.0 * (x - 0.75)));
             
             let hue = 240 - t * 240;
             const color = `hsl(${hue}, 100%, 50%)`;
