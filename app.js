@@ -125,13 +125,23 @@ const ggChart = new Chart(document.getElementById('ggChart').getContext('2d'), {
 const heatmapChart = new Chart(document.getElementById('heatmapChart').getContext('2d'), {
     type: 'scatter',
     data: {
-        datasets: [{
-            label: 'Speed Heatmap',
-            data: [],
-            backgroundColor: [], // Color will be updated dynamically per point
-            pointRadius: 4,
-            borderWidth: 0
-        }]
+        datasets: [
+            {
+                label: 'Speed Heatmap',
+                data: [],
+                backgroundColor: [], // Color will be updated dynamically per point
+                pointRadius: 4,
+                borderWidth: 0
+            },
+            {
+                label: 'Current Position',
+                data: [],
+                backgroundColor: '#ffffff',
+                borderColor: '#111827', // Dark border for contrast
+                pointRadius: 12, // Large dot
+                borderWidth: 3
+            }
+        ]
     },
     options: {
         responsive: true, maintainAspectRatio: false, animation: false,
@@ -275,6 +285,11 @@ setInterval(() => {
                 hmData.shift();
                 hmColors.shift();
             }
+
+            // 히트맵 상의 현재 차량 위치 크게 강조
+            heatmapChart.data.datasets[1].data = [{x: x_meters, y: y_meters}];
+            heatmapChart.data.datasets[1].backgroundColor = color; // 현재 속도 색상 반영
+
             heatmapChart.update('none');
         }
 
