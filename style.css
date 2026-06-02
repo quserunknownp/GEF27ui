@@ -136,6 +136,13 @@ body {
     min-height: 500px;
 }
 
+.map-wrapper {
+    aspect-ratio: 1 / 1;
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
 .panel-header h2 {
     font-size: 1.1rem;
     color: var(--text-muted);
