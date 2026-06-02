@@ -51,15 +51,23 @@ const imuChart = createChart('imuChart', [
 const gpsChart = new Chart(document.getElementById('gpsChart').getContext('2d'), {
     type: 'scatter',
     data: {
-        datasets: [{
-            label: 'Path',
-            data: [], // will store {x: lon, y: lat}
-            borderColor: '#10b981',
-            backgroundColor: '#10b981',
-            pointRadius: 2,
-            showLine: true, // connect points
-            borderWidth: 1
-        }]
+        datasets: [
+            {
+                label: 'Circuit History',
+                data: [], 
+                backgroundColor: 'rgba(16, 185, 129, 0.2)', // Faint green for past path
+                pointRadius: 2,
+                borderWidth: 0
+            },
+            {
+                label: 'Current Position',
+                data: [], 
+                backgroundColor: '#10b981', // Bright green for current car
+                borderColor: '#ffffff',
+                pointRadius: 6,
+                borderWidth: 2
+            }
+        ]
     },
     options: {
         responsive: true, maintainAspectRatio: false, animation: false,
@@ -156,11 +164,16 @@ function connectWebSocket() {
                 document.getElementById('lat-value').textContent = data.lat.toFixed(5);
                 document.getElementById('lon-value').textContent = data.lon.toFixed(5);
 
-                // GPS 궤적 업데이트
+                // GPS 궤적 업데이트 (History + Current)
                 if(data.lat && data.lon) {
-                    const gpsPoints = gpsChart.data.datasets[0].data;
-                    gpsPoints.push({x: data.lon, y: data.lat});
-                    if(gpsPoints.length > maxGpsPoints) gpsPoints.shift();
+                    // 과거 궤적 누적 (흐릿하게)
+                    const history = gpsChart.data.datasets[0].data;
+                    history.push({x: data.lon, y: data.lat});
+                    if(history.length > 50000) history.shift(); // 메모리 오버플로우 방지
+                    
+                    // 현재 위치 점 (크고 선명하게)
+                    gpsChart.data.datasets[1].data = [{x: data.lon, y: data.lat}];
+                    
                     gpsChart.update('none');
                 }
                 
