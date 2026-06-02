@@ -351,8 +351,8 @@ setInterval(() => {
 
             // gpsChart.update()는 하단에서 일괄 처리
 
-            // Heatmap color scale: 0 -> Blue, 85 -> Red
-            let t = Math.max(0, Math.min(1, latestData.speed / 85.0));
+            // Heatmap color scale: 0 -> Blue, 120 -> Red
+            let t = Math.max(0, Math.min(1, latestData.speed / 120.0));
             t = Math.pow(t, 3.0);
             
             let hue = 240 - t * 240;
