@@ -454,7 +454,7 @@ setInterval(() => {
     // FOC Scatter Data Push
     focChart.data.datasets[0].data.push({x: latestData.rpm, y: latestData.id});
     focChart.data.datasets[1].data.push({x: latestData.rpm, y: latestData.iq});
-    if(focChart.data.datasets[0].data.length > 500) {
+    if(focChart.data.datasets[0].data.length > 3000) {
         focChart.data.datasets[0].data.shift();
         focChart.data.datasets[1].data.shift();
     }
