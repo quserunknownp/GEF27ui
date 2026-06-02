@@ -190,6 +190,20 @@ const thermalsChart = new Chart(document.getElementById('thermalsChart').getCont
     }
 });
 
+// Driver Chart
+const driverChart = new Chart(document.getElementById('driverChart').getContext('2d'), {
+    type: 'line',
+    data: { labels: Array(200).fill(''), datasets: [{ label: 'Throttle', data: Array(200).fill(0), borderColor: '#22c55e' }, { label: 'Brake', data: Array(200).fill(0), borderColor: '#ef4444' }] },
+    options: { responsive: true, maintainAspectRatio: false, animation: false, scales: { y: { min: 0, max: 100 } } }
+});
+
+// FOC Chart
+const focChart = new Chart(document.getElementById('focChart').getContext('2d'), {
+    type: 'scatter',
+    data: { datasets: [{ label: 'Id', data: [] }, { label: 'Iq', data: [] }] },
+    options: { responsive: true, maintainAspectRatio: false, animation: false }
+});
+
 // ----------------------------------------------------
 // 재생 큐 (Playout Queue) 및 상태 변수
 // ----------------------------------------------------
@@ -235,6 +249,12 @@ setInterval(() => {
         document.getElementById('lon-value').textContent = latestData.gps1_lon.toFixed(5);
         document.getElementById('gg-lat-value').textContent = emaAy.toFixed(2);
         document.getElementById('gg-lon-value').textContent = emaAx.toFixed(2);
+        
+        if(document.getElementById('thr-value') && latestData.throttle_pedal !== undefined) {
+            document.getElementById('thr-value').textContent = latestData.throttle_pedal.toFixed(0);
+            document.getElementById('brk-value').textContent = latestData.brake_pressure.toFixed(0);
+            document.getElementById('str-value').textContent = latestData.steering_angle.toFixed(1);
+        }
         
         // Thermals & Battery
         if(latestData.motor_temp !== undefined) {
@@ -423,6 +443,22 @@ setInterval(() => {
     imuChart.data.datasets[5].data.push(latestData.az);
     imuChart.data.datasets[5].data.shift();
     
+    // Driver Chart Data Push
+    if(latestData.throttle_pedal !== undefined) {
+        driverChart.data.datasets[0].data.push(latestData.throttle_pedal);
+        driverChart.data.datasets[0].data.shift();
+        driverChart.data.datasets[1].data.push(latestData.brake_pressure);
+        driverChart.data.datasets[1].data.shift();
+    }
+    
+    // FOC Scatter Data Push
+    focChart.data.datasets[0].data.push({x: latestData.rpm, y: latestData.id});
+    focChart.data.datasets[1].data.push({x: latestData.rpm, y: latestData.iq});
+    if(focChart.data.datasets[0].data.length > 500) {
+        focChart.data.datasets[0].data.shift();
+        focChart.data.datasets[1].data.shift();
+    }
+    
     // 부하가 큰 꺾은선 차트들(Line Charts)은 10Hz(매 4번째 프레임)로 업데이트하여 브라우저 CPU/GPU 최적화
     renderCounter++;
     if (renderCounter % 4 === 0) {
@@ -431,6 +467,8 @@ setInterval(() => {
         speedChart.update('none');
         motorChart.update('none');
         imuChart.update('none');
+        driverChart.update('none');
+        focChart.update('none');
     }
 
 }, 25);

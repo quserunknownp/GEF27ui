@@ -70,6 +70,21 @@
                     </div>
                 </div>
 
+                <!-- Driver Input Panel -->
+                <div class="glass-panel main-gauge span-2">
+                    <div class="panel-header">
+                        <h2 style="color: #22c55e;">DRIVER INPUT (Throttle, Brake, Steering)</h2>
+                    </div>
+                    <div class="value-container" style="flex-wrap: nowrap; margin: 0.5rem 0; justify-content: space-around;">
+                        <div><span class="unit" style="font-size:1rem; color:#22c55e;">Thr:</span> <span id="thr-value" class="digital-value" style="font-size:2rem; text-shadow:none; color:#22c55e;">0</span><span class="unit">%</span></div>
+                        <div><span class="unit" style="font-size:1rem; margin-left:10px; color:#ef4444;">Brk:</span> <span id="brk-value" class="digital-value" style="font-size:2rem; text-shadow:none; color:#ef4444;">0</span><span class="unit">%</span></div>
+                        <div><span class="unit" style="font-size:1rem; margin-left:10px; color:#3b82f6;">Str:</span> <span id="str-value" class="digital-value" style="font-size:2rem; text-shadow:none; color:#3b82f6;">0</span><span class="unit">°</span></div>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="driverChart"></canvas>
+                    </div>
+                </div>
+
                 <!-- Speed Heatmap (Full Width) -->
                 <div class="glass-panel main-gauge full-width">
                     <div class="panel-header">
@@ -151,6 +166,16 @@
                     </div>
                     <div class="chart-wrapper">
                         <canvas id="voltageChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- FOC Scatter Panel (Full Width) -->
+                <div class="glass-panel main-gauge full-width">
+                    <div class="panel-header">
+                        <h2 style="color: #c084fc;">MOTOR FOC TRAJECTORY (Id, Iq vs RPM)</h2>
+                    </div>
+                    <div class="chart-wrapper map-wrapper">
+                        <canvas id="focChart"></canvas>
                     </div>
                 </div>
             </section>
