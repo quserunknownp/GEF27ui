@@ -155,7 +155,7 @@ let emaAx = 0, emaAy = 0, emaAz = 9.81;
 
 // GPS EMA Variables for Heading
 let emaDx = 0, emaDy = 1;
-let lastGps1Lon = 0, lastGps1Lat = 0;
+let last_x_meters = 0, last_y_meters = 0;
 
 // 10Hz (100ms) 렌더링 루프 - 버퍼에서 하나씩 꺼내서 그린다!
 setInterval(() => {
@@ -190,63 +190,62 @@ setInterval(() => {
 
         // GPS 궤적 캔버스 업데이트 (Zoom-in 및 Steering Vector 표현)
         if(latestData.gps1_lat && latestData.gps1_lon) {
-            const history = gpsChart.data.datasets[0].data;
-            history.push({x: latestData.gps1_lon, y: latestData.gps1_lat});
-            if(history.length > 2000) history.shift(); // 로컬 맵이므로 긴 꼬리 불필요
-            
-            // EMA for Heading Vector
-            if(lastGps1Lon !== 0) {
-                const dx = latestData.gps1_lon - lastGps1Lon;
-                const dy = latestData.gps1_lat - lastGps1Lat;
-                emaDx = (alpha * dx) + ((1 - alpha) * emaDx);
-                emaDy = (alpha * dy) + ((1 - alpha) * emaDy);
-            }
-            lastGps1Lon = latestData.gps1_lon;
-            lastGps1Lat = latestData.gps1_lat;
-            
-            const headingAngle = Math.atan2(emaDx, emaDy) * 180 / Math.PI; // North=0
-
-            // Current Car Heading Vector (Blue Line)
-            const headingRad = headingAngle * Math.PI / 180;
-            const h_len = 0.00015; // 파란색 직선 (약 15m)
-            const headingPointX = latestData.gps1_lon + h_len * Math.sin(headingRad);
-            const headingPointY = latestData.gps1_lat + h_len * Math.cos(headingRad);
-
-            gpsChart.data.datasets[1].data = [
-                {x: latestData.gps1_lon, y: latestData.gps1_lat},
-                {x: headingPointX, y: headingPointY}
-            ];
-            // 삼각형 회전 대신 선을 그렸으므로 불필요한 속성 제거
-            gpsChart.data.datasets[1].pointStyle = 'circle';
-            gpsChart.data.datasets[1].rotation = 0;
-
-            // Steering Vector Overlay
-            const steeringAngleDeg = headingAngle + latestData.steering_angle;
-            const steeringRad = steeringAngleDeg * Math.PI / 180;
-            const v_len = 0.00015; // 약 15m 길이 화살표
-            const steerPointX = latestData.gps1_lon + v_len * Math.sin(steeringRad);
-            const steerPointY = latestData.gps1_lat + v_len * Math.cos(steeringRad);
-            
-            gpsChart.data.datasets[2].data = [
-                {x: latestData.gps1_lon, y: latestData.gps1_lat},
-                {x: steerPointX, y: steerPointY}
-            ];
-
-            // Local Zoom-in Bounds (차량 반경 약 30m)
-            gpsChart.options.scales.x.min = latestData.gps1_lon - 0.0003;
-            gpsChart.options.scales.x.max = latestData.gps1_lon + 0.0003;
-            gpsChart.options.scales.y.min = latestData.gps1_lat - 0.0003;
-            gpsChart.options.scales.y.max = latestData.gps1_lat + 0.0003;
-
-            gpsChart.update('none');
-
-            // Speed Heatmap 업데이트 (미터 환산)
+            // 모든 연산을 완벽한 직교 좌표계(Meters)로 변환하여 벡터 길이 왜곡 방지
             const BASE_LAT = 37.5665;
             const BASE_LON = 126.9780;
             const x_meters = (latestData.gps1_lon - BASE_LON) * 88000;
             const y_meters = (latestData.gps1_lat - BASE_LAT) * 111000;
 
-            // Hue mapping for speed: 0km/h -> Blue(240), 100km/h -> Red(0)
+            const history = gpsChart.data.datasets[0].data;
+            history.push({x: x_meters, y: y_meters});
+            if(history.length > 2000) history.shift(); 
+            
+            // EMA for Heading Vector
+            if(last_x_meters !== 0) {
+                const dx = x_meters - last_x_meters;
+                const dy = y_meters - last_y_meters;
+                emaDx = (alpha * dx) + ((1 - alpha) * emaDx);
+                emaDy = (alpha * dy) + ((1 - alpha) * emaDy);
+            }
+            last_x_meters = x_meters;
+            last_y_meters = y_meters;
+            
+            const headingAngle = Math.atan2(emaDx, emaDy) * 180 / Math.PI; // North=0
+
+            // Current Car Heading Vector (Blue Line) - 정확히 15미터 길이 고정
+            const headingRad = headingAngle * Math.PI / 180;
+            const h_len = 15; 
+            const headingPointX = x_meters + h_len * Math.sin(headingRad);
+            const headingPointY = y_meters + h_len * Math.cos(headingRad);
+
+            gpsChart.data.datasets[1].data = [
+                {x: x_meters, y: y_meters},
+                {x: headingPointX, y: headingPointY}
+            ];
+            gpsChart.data.datasets[1].pointStyle = 'circle';
+            gpsChart.data.datasets[1].rotation = 0;
+
+            // Steering Vector Overlay - 정확히 15미터 길이 고정
+            const steeringAngleDeg = headingAngle + latestData.steering_angle;
+            const steeringRad = steeringAngleDeg * Math.PI / 180;
+            const v_len = 15; 
+            const steerPointX = x_meters + v_len * Math.sin(steeringRad);
+            const steerPointY = y_meters + v_len * Math.cos(steeringRad);
+            
+            gpsChart.data.datasets[2].data = [
+                {x: x_meters, y: y_meters},
+                {x: steerPointX, y: steerPointY}
+            ];
+
+            // Local Zoom-in Bounds (차량 반경 30m 1:1 고정)
+            gpsChart.options.scales.x.min = x_meters - 30;
+            gpsChart.options.scales.x.max = x_meters + 30;
+            gpsChart.options.scales.y.min = y_meters - 30;
+            gpsChart.options.scales.y.max = y_meters + 30;
+
+            gpsChart.update('none');
+
+            // Speed Heatmap 업데이트 (미터 환산 완료된 좌표 사용)
             let hue = 240 - (latestData.speed / 100.0) * 240;
             hue = Math.max(0, Math.min(240, hue));
             const color = `hsl(${hue}, 100%, 50%)`;
