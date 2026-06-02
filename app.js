@@ -265,7 +265,8 @@ setInterval(() => {
 
             const history = gpsChart.data.datasets[0].data;
             history.push({x: x_meters, y: y_meters});
-            if(history.length > 2000) history.shift(); 
+            // 전체 8자 트랙 완주에 약 250초가 소요되므로, 40Hz 기준 15000 프레임 이상 보존해야 궤적이 안 끊김
+            if(history.length > 15000) history.shift(); 
             
             // Dual-GPS를 이용한 절대 방위각 계산 (노이즈 포함됨)
             const dualGpsDx = x_meters - x2_meters;
@@ -331,16 +332,16 @@ setInterval(() => {
             // gpsChart.update()는 하단에서 일괄 처리
 
             // Speed Heatmap 업데이트 (미터 환산 완료된 좌표 사용)
-            // 차속 범위가 50~100 사이를 오가므로 75km/h(0.75)를 중심으로 Sigmoid 적용
-            let x = latestData.speed / 100.0;
-            let t = 1.0 / (1.0 + Math.exp(-20.0 * (x - 0.75)));
+            // 원래 요청하신 대로 0~100km/h 기반의 절대 색상(Smootherstep)으로 복원
+            let t = Math.max(0, Math.min(1, latestData.speed / 100.0));
+            t = t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
             
             let hue = 240 - t * 240;
             const color = `hsl(${hue}, 100%, 50%)`;
 
             heatmapChart.data.datasets[0].data.push({x: x_meters, y: y_meters});
             heatmapChart.data.datasets[0].backgroundColor.push(color);
-            if(heatmapChart.data.datasets[0].data.length > 2000) {
+            if(heatmapChart.data.datasets[0].data.length > 15000) {
                 heatmapChart.data.datasets[0].data.shift();
                 heatmapChart.data.datasets[0].backgroundColor.shift();
             }
