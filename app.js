@@ -258,8 +258,11 @@ setInterval(() => {
             gpsChart.update('none');
 
             // Speed Heatmap 업데이트 (미터 환산 완료된 좌표 사용)
-            let hue = 240 - (latestData.speed / 100.0) * 240;
-            hue = Math.max(0, Math.min(240, hue));
+            // 평균 속도 대역(중간값)의 시각적 변화를 극대화하기 위해 Smoothstep (S-Curve) 적용
+            let t = Math.max(0, Math.min(1, latestData.speed / 100.0));
+            t = t * t * (3.0 - 2.0 * t); // Smoothstep 함수 (약한 베지어 커브)
+            
+            let hue = 240 - t * 240;
             const color = `hsl(${hue}, 100%, 50%)`;
 
             const hmData = heatmapChart.data.datasets[0].data;
