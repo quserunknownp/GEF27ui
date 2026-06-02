@@ -208,6 +208,8 @@ let last_x_meters = 0, last_y_meters = 0;
 let currentHeading = null;
 let lastTimestamp = 0;
 
+let renderCounter = 0;
+
 // 40Hz (25ms) 렌더링 루프 - 버퍼에서 하나씩 꺼내서 그린다!
 setInterval(() => {
     // 큐에 데이터가 있으면 하나 꺼낸다.
@@ -328,7 +330,7 @@ setInterval(() => {
             gpsChart.options.scales.y.min = y_meters - 30;
             gpsChart.options.scales.y.max = y_meters + 30;
 
-            gpsChart.update('none');
+            // gpsChart.update()는 하단에서 일괄 처리
 
             // Speed Heatmap 업데이트 (미터 환산 완료된 좌표 사용)
             // 차속 범위가 좁아도(예: 40~60) 색상 대비가 극적으로 일어나도록 아주 가파른 Logistic Sigmoid 함수 적용
@@ -339,22 +341,21 @@ setInterval(() => {
             let hue = 240 - t * 240;
             const color = `hsl(${hue}, 100%, 50%)`;
 
-            const hmData = heatmapChart.data.datasets[0].data;
-            const hmColors = heatmapChart.data.datasets[0].backgroundColor;
-            
-            hmData.push({x: x_meters, y: y_meters});
-            hmColors.push(color);
-            
-            if(hmData.length > 50000) {
-                hmData.shift();
-                hmColors.shift();
+            heatmapChart.data.datasets[0].data.push({x: x_meters, y: y_meters});
+            heatmapChart.data.datasets[0].backgroundColor.push(color);
+            if(heatmapChart.data.datasets[0].data.length > 2000) {
+                heatmapChart.data.datasets[0].data.shift();
+                heatmapChart.data.datasets[0].backgroundColor.shift();
             }
 
             // 히트맵 상의 현재 차량 위치 크게 강조
             heatmapChart.data.datasets[1].data = [{x: x_meters, y: y_meters}];
             heatmapChart.data.datasets[1].backgroundColor = color; // 현재 속도 색상 반영
 
+            // 실시간 부드러움이 필요한 위치/궤적 차트는 40Hz로 매 프레임 업데이트
+            gpsChart.update('none');
             heatmapChart.update('none');
+            ggChart.update('none');
         }
 
         // Thermal History Chart 업데이트
@@ -371,16 +372,14 @@ setInterval(() => {
                 thermalsChart.data.datasets[1].data.shift();
                 thermalsChart.data.datasets[2].data.shift();
             }
-            thermalsChart.update('none');
         }
 
-        // G-G Diagram 캔버스 업데이트 (X = 측면가속도 Ay, Y = 종방향가속도 Ax)
+        // G-G Diagram 데이터 푸시 (업데이트는 위에서 40Hz로 처리)
         const ggHistory = ggChart.data.datasets[0].data;
         ggHistory.push({x: emaAy, y: emaAx});
-        if(ggHistory.length > 50) ggHistory.shift(); // 꼬리는 최근 50개(0.5초)만 유지
+        if(ggHistory.length > 100) ggHistory.shift();
         
         ggChart.data.datasets[1].data = [{x: emaAy, y: emaAx}];
-        ggChart.update('none');
 
         // RPM Warning UI 업데이트
         const rpmEl = document.getElementById('rpm-value');
@@ -400,21 +399,17 @@ setInterval(() => {
     // 차트 밀어내기 (매 100ms마다 수행)
     rpmChart.data.datasets[0].data.push(latestData.rpm);
     rpmChart.data.datasets[0].data.shift();
-    rpmChart.update('none');
 
     speedChart.data.datasets[0].data.push(latestData.speed);
     speedChart.data.datasets[0].data.shift();
-    speedChart.update('none');
     
     voltageChart.data.datasets[0].data.push(latestData.pack_voltage);
     voltageChart.data.datasets[0].data.shift();
-    voltageChart.update('none');
 
     motorChart.data.datasets[0].data.push(latestData.id);
     motorChart.data.datasets[0].data.shift();
     motorChart.data.datasets[1].data.push(latestData.iq);
     motorChart.data.datasets[1].data.shift();
-    motorChart.update('none');
 
     imuChart.data.datasets[0].data.push(emaAx);
     imuChart.data.datasets[0].data.shift();
@@ -428,7 +423,17 @@ setInterval(() => {
     imuChart.data.datasets[4].data.shift();
     imuChart.data.datasets[5].data.push(latestData.az);
     imuChart.data.datasets[5].data.shift();
-    imuChart.update('none');
+    
+    // 부하가 큰 꺾은선 차트들(Line Charts)은 10Hz(매 4번째 프레임)로 업데이트하여 브라우저 CPU/GPU 최적화
+    renderCounter++;
+    if (renderCounter % 4 === 0) {
+        thermalsChart.update('none');
+        rpmChart.update('none');
+        speedChart.update('none');
+        voltageChart.update('none');
+        motorChart.update('none');
+        imuChart.update('none');
+    }
 
 }, 25);
 
