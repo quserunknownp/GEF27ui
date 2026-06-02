@@ -104,7 +104,7 @@ setInterval(() => {
 
         // UI 텍스트 즉시 업데이트
         document.getElementById('rpm-value').textContent = latestData.rpm;
-        document.getElementById('speed-value').textContent = latestData.speed;
+        document.getElementById('speed-value').textContent = latestData.speed.toFixed(1);
         document.getElementById('id-value').textContent = latestData.id.toFixed(1);
         document.getElementById('iq-value').textContent = latestData.iq.toFixed(1);
         document.getElementById('v-value').textContent = latestData.pack_voltage.toFixed(1);
