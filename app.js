@@ -39,7 +39,7 @@ const rpmChart = new Chart(ctxRpm, {
     },
     options: {
         ...commonOptions,
-        scales: { ...commonOptions.scales, y: { ...commonOptions.scales.y, suggestedMax: 12000, grace: '10%' } }
+        scales: { ...commonOptions.scales, y: { ...commonOptions.scales.y, grace: '10%' } }
     }
 });
 
@@ -60,7 +60,7 @@ const speedChart = new Chart(ctxSpeed, {
     },
     options: {
         ...commonOptions,
-        scales: { ...commonOptions.scales, y: { ...commonOptions.scales.y, suggestedMax: 200, grace: '10%' } }
+        scales: { ...commonOptions.scales, y: { ...commonOptions.scales.y, grace: '10%' } }
     }
 });
 
