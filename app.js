@@ -14,10 +14,6 @@ document.querySelectorAll('.tab-btn').forEach(button => {
     });
 });
 
-// Chart.js Configuration (for scatter plots)
-Chart.defaults.color = '#94a3b8';
-Chart.defaults.font.family = "'Inter', sans-serif";
-
 // --- uPlot Configuration & Helpers ---
 const UPLOT_POINTS = 200;
 const uplotX = Array.from({length: UPLOT_POINTS}, (_, i) => i);
@@ -48,12 +44,15 @@ function makeUPlotOpts(seriesConfigs, extraOpts = {}) {
 
 function initUPlot(containerId, opts, initialData) {
     const canvas = document.getElementById(containerId);
-    const container = canvas.parentNode;
-    container.innerHTML = ''; // Remove Chart.js canvas
-    const plot = new uPlot(opts, initialData, container);
-    uPlots.push(plot);
-    ro.observe(container);
-    return plot;
+    if(canvas && canvas.tagName === 'CANVAS') {
+        const container = canvas.parentNode;
+        container.innerHTML = ''; // Remove canvas
+        const plot = new uPlot(opts, initialData, container);
+        uPlots.push(plot);
+        ro.observe(container);
+        return plot;
+    }
+    return null;
 }
 
 // 1. RPM & Speed (uPlot)
@@ -89,52 +88,6 @@ const imuPlot = initUPlot('imuChart', makeUPlotOpts([
     { stroke: 'rgba(59, 130, 246, 0.3)', width: 1, label: 'az(raw)', dash: [5,5] }
 ], { legend: { show: true } }), imuData);
 
-// 5. GPS (Chart.js - Scatter)
-const gpsChart = new Chart(document.getElementById('gpsChart').getContext('2d'), {
-    type: 'scatter',
-    data: {
-        datasets: [
-            { label: 'Circuit History', data: [], backgroundColor: 'rgba(16, 185, 129, 0.2)', pointRadius: 2, borderWidth: 0 },
-            { label: 'Current Heading', data: [], backgroundColor: '#3b82f6', borderColor: '#3b82f6', showLine: true, pointRadius: 0, borderWidth: 4 },
-            { label: 'Steering Vector', data: [], borderColor: '#f59e0b', borderDash: [5, 5], showLine: true, pointRadius: 0, borderWidth: 3 }
-        ]
-    },
-    options: {
-        responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } },
-        scales: { x: { grid: { color: 'rgba(255,255,255,0.05)' }, type: 'linear', position: 'bottom' }, y: { grid: { color: 'rgba(255,255,255,0.05)' } } }
-    }
-});
-
-// 6. G-G Diagram (Chart.js - Scatter)
-const ggChart = new Chart(document.getElementById('ggChart').getContext('2d'), {
-    type: 'scatter',
-    data: {
-        datasets: [
-            { label: 'G History', data: [], backgroundColor: 'rgba(59, 130, 246, 0.2)', pointRadius: 2, borderWidth: 0 },
-            { label: 'Current G', data: [], backgroundColor: '#3b82f6', borderColor: '#ffffff', pointRadius: 6, borderWidth: 2 }
-        ]
-    },
-    options: {
-        responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } },
-        scales: { x: { grid: { color: 'rgba(255,255,255,0.1)' }, type: 'linear', min: -5, max: 5 }, y: { grid: { color: 'rgba(255,255,255,0.1)' }, type: 'linear', min: -5, max: 5 } }
-    }
-});
-
-// 7. Speed Heatmap (Chart.js - Scatter)
-const heatmapChart = new Chart(document.getElementById('heatmapChart').getContext('2d'), {
-    type: 'scatter',
-    data: {
-        datasets: [
-            { label: 'Speed Heatmap', data: [], backgroundColor: [], pointRadius: 4, borderWidth: 0 },
-            { label: 'Current Position', data: [], backgroundColor: '#ffffff', borderColor: '#111827', pointRadius: 12, borderWidth: 3 }
-        ]
-    },
-    options: {
-        responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } },
-        scales: { x: { type: 'linear', min: -300, max: 300, grid: { color: 'rgba(255,255,255,0.05)' } }, y: { type: 'linear', min: -250, max: 250, grid: { color: 'rgba(255,255,255,0.05)' } } }
-    }
-});
-
 // 8. Thermal History Chart (uPlot)
 const THERMAL_POINTS = 500;
 const thermalsX = Array.from({length: THERMAL_POINTS}, (_, i) => i);
@@ -152,12 +105,47 @@ const driverPlot = initUPlot('driverChart', makeUPlotOpts([
     { stroke: '#ef4444', width: 2, label: 'Brake' }
 ], { scales: { x: {time:false}, y: {range: [0, 100]} } }), driverData);
 
-// 10. FOC Chart (Chart.js - Scatter)
-const focChart = new Chart(document.getElementById('focChart').getContext('2d'), {
-    type: 'scatter',
-    data: { datasets: [{ label: 'Id', data: [] }, { label: 'Iq', data: [] }] },
-    options: { responsive: true, maintainAspectRatio: false, animation: false }
-});
+// --- Plotly.js (WebGL) Configuration ---
+const layoutCommon = {
+    paper_bgcolor: 'transparent',
+    plot_bgcolor: 'transparent',
+    font: { color: '#94a3b8', family: "'Inter', sans-serif" },
+    margin: { t: 10, b: 20, l: 30, r: 10 },
+    showlegend: false
+};
+
+// 5. GPS (Plotly - scattergl)
+const gpsData = [
+    { x: [], y: [], mode: 'markers', type: 'scattergl', marker: { color: 'rgba(16, 185, 129, 0.3)', size: 3 }, name: 'History' },
+    { x: [], y: [], mode: 'lines+markers', type: 'scattergl', line: { color: '#3b82f6', width: 4 }, marker: { size: 6, color: '#3b82f6' }, name: 'Heading' },
+    { x: [], y: [], mode: 'lines', type: 'scattergl', line: { color: '#f59e0b', width: 3, dash: 'dash' }, name: 'Steering' }
+];
+const gpsLayout = { ...layoutCommon, xaxis: { gridcolor: 'rgba(255,255,255,0.05)', zeroline: false }, yaxis: { gridcolor: 'rgba(255,255,255,0.05)', zeroline: false, scaleanchor: 'x', scaleratio: 1 } };
+Plotly.newPlot('gpsChart', gpsData, gpsLayout, {responsive: true, displayModeBar: false});
+
+// 6. G-G Diagram (Plotly - scattergl)
+const ggData = [
+    { x: [], y: [], mode: 'markers', type: 'scattergl', marker: { color: 'rgba(59, 130, 246, 0.3)', size: 4 } },
+    { x: [], y: [], mode: 'markers', type: 'scattergl', marker: { color: '#ffffff', size: 10, line: {color: '#3b82f6', width: 2} } }
+];
+const ggLayout = { ...layoutCommon, xaxis: { gridcolor: 'rgba(255,255,255,0.1)', range: [-5, 5] }, yaxis: { gridcolor: 'rgba(255,255,255,0.1)', range: [-5, 5] } };
+Plotly.newPlot('ggChart', ggData, ggLayout, {responsive: true, displayModeBar: false});
+
+// 7. Speed Heatmap (Plotly - scattergl)
+const heatmapData = [
+    { x: [], y: [], mode: 'markers', type: 'scattergl', marker: { color: [], colorscale: 'Jet', cmin: 0, cmax: 120, size: 5 } },
+    { x: [], y: [], mode: 'markers', type: 'scattergl', marker: { color: '#ffffff', size: 12, line: {color: '#111827', width: 3} } }
+];
+const heatmapLayout = { ...layoutCommon, xaxis: { gridcolor: 'rgba(255,255,255,0.05)' }, yaxis: { gridcolor: 'rgba(255,255,255,0.05)', scaleanchor: 'x', scaleratio: 1 } };
+Plotly.newPlot('heatmapChart', heatmapData, heatmapLayout, {responsive: true, displayModeBar: false});
+
+// 10. FOC Chart (Plotly - scattergl)
+const focData = [
+    { x: [], y: [], mode: 'markers', type: 'scattergl', marker: { color: '#c084fc', size: 4 }, name: 'Id' },
+    { x: [], y: [], mode: 'markers', type: 'scattergl', marker: { color: '#f472b6', size: 4 }, name: 'Iq' }
+];
+const focLayout = { ...layoutCommon, showlegend: true, xaxis: { gridcolor: 'rgba(255,255,255,0.05)' }, yaxis: { gridcolor: 'rgba(255,255,255,0.05)' } };
+Plotly.newPlot('focChart', focData, focLayout, {responsive: true, displayModeBar: false});
 
 // ----------------------------------------------------
 // 재생 큐 (Playout Queue) 및 상태 변수
@@ -165,13 +153,21 @@ const focChart = new Chart(document.getElementById('focChart').getContext('2d'),
 let playoutQueue = [];
 let latestData = { rpm:0, speed:0, id:0, iq:0, pack_voltage:0, ax:0, ay:0, az:9.81, gps1_lat:0, gps1_lon:0 };
 
-// Causal Filter (EMA) Variables
-const alpha = 0.15; // 0.15: 부드러움, 1.0: 원본 데이터
+const alpha = 0.15; 
 let emaAx = 0, emaAy = 0, emaAz = 9.81;
 
 let currentHeading = null;
 let lastTimestamp = 0;
 let renderCounter = 0;
+
+let gpsHistoryX = [];
+let gpsHistoryY = [];
+let heatmapColor = [];
+let ggHistoryX = [];
+let ggHistoryY = [];
+let focHistoryX = [];
+let focHistoryId = [];
+let focHistoryIq = [];
 
 function updateUPlotData(dataArray, newValues) {
     for (let i = 0; i < newValues.length; i++) {
@@ -180,12 +176,11 @@ function updateUPlotData(dataArray, newValues) {
     }
 }
 
-// 20Hz (50ms) 렌더링 루프 - 버퍼에서 하나씩 꺼내서 그린다!
+// 20Hz (50ms) 렌더링 루프
 setInterval(() => {
     if (playoutQueue.length > 0) {
         latestData = playoutQueue.shift();
         
-        // Causal Filter (EMA) 연산을 여기서 수행
         emaAx = (alpha * latestData.ax) + ((1 - alpha) * emaAx);
         emaAy = (alpha * latestData.ay) + ((1 - alpha) * emaAy);
         emaAz = (alpha * latestData.az) + ((1 - alpha) * emaAz);
@@ -210,7 +205,6 @@ setInterval(() => {
             document.getElementById('str-value').textContent = latestData.steering_angle.toFixed(1);
         }
         
-        // Thermals & Battery
         if(latestData.motor_temp !== undefined) {
             document.getElementById('motor-temp-value').textContent = latestData.motor_temp.toFixed(1);
             document.getElementById('inv-temp-value').textContent = latestData.inverter_temp.toFixed(1);
@@ -225,7 +219,7 @@ setInterval(() => {
             document.getElementById('heatmap-speed-value').textContent = latestData.speed.toFixed(1);
         }
 
-        // GPS 궤적 캔버스 업데이트
+        // GPS 데이터 버퍼링
         if(latestData.gps1_lat && latestData.gps1_lon) {
             const BASE_LAT = 37.5665;
             const BASE_LON = 126.9780;
@@ -234,9 +228,15 @@ setInterval(() => {
             const x2_meters = (latestData.gps2_lon - BASE_LON) * 88000;
             const y2_meters = (latestData.gps2_lat - BASE_LAT) * 111000;
 
-            const history = gpsChart.data.datasets[0].data;
-            history.push({x: x_meters, y: y_meters});
-            if(history.length > 15000) history.shift(); 
+            gpsHistoryX.push(x_meters);
+            gpsHistoryY.push(y_meters);
+            heatmapColor.push(latestData.speed);
+
+            if(gpsHistoryX.length > 15000) {
+                gpsHistoryX.shift();
+                gpsHistoryY.shift();
+                heatmapColor.shift();
+            }
             
             const dualGpsDx = x_meters - x2_meters;
             const dualGpsDy = y_meters - y2_meters;
@@ -257,61 +257,45 @@ setInterval(() => {
                 lastTimestamp = latestData.timestamp;
             }
 
-            const headingAngle = currentHeading;
-            const headingRad = headingAngle * Math.PI / 180;
-            const h_len = 15; 
-            const headingPointX = x_meters + h_len * Math.sin(headingRad);
-            const headingPointY = y_meters + h_len * Math.cos(headingRad);
+            const headingRad = currentHeading * Math.PI / 180;
+            const headingPointX = x_meters + 15 * Math.sin(headingRad);
+            const headingPointY = y_meters + 15 * Math.cos(headingRad);
 
-            gpsChart.data.datasets[1].data = [ {x: x_meters, y: y_meters}, {x: headingPointX, y: headingPointY} ];
-            gpsChart.data.datasets[1].pointStyle = 'circle';
-            gpsChart.data.datasets[1].rotation = 0;
-
-            const steeringAngleDeg = headingAngle + latestData.steering_angle;
-            const steeringRad = steeringAngleDeg * Math.PI / 180;
-            const v_len = 15; 
-            const steerPointX = x_meters + v_len * Math.sin(steeringRad);
-            const steerPointY = y_meters + v_len * Math.cos(steeringRad);
+            const steeringRad = (currentHeading + latestData.steering_angle) * Math.PI / 180;
+            const steerPointX = x_meters + 15 * Math.sin(steeringRad);
+            const steerPointY = y_meters + 15 * Math.cos(steeringRad);
             
-            gpsChart.data.datasets[2].data = [ {x: x_meters, y: y_meters}, {x: steerPointX, y: steerPointY} ];
+            gpsData[0].x = gpsHistoryX;
+            gpsData[0].y = gpsHistoryY;
+            gpsData[1].x = [x_meters, headingPointX];
+            gpsData[1].y = [y_meters, headingPointY];
+            gpsData[2].x = [x_meters, steerPointX];
+            gpsData[2].y = [y_meters, steerPointY];
+            
+            gpsLayout.xaxis.range = [x_meters - 30, x_meters + 30];
+            gpsLayout.yaxis.range = [y_meters - 30, y_meters + 30];
 
-            gpsChart.options.scales.x.min = x_meters - 30;
-            gpsChart.options.scales.x.max = x_meters + 30;
-            gpsChart.options.scales.y.min = y_meters - 30;
-            gpsChart.options.scales.y.max = y_meters + 30;
-
-            let t = Math.max(0, Math.min(1, latestData.speed / 120.0));
-            t = Math.pow(t, 3.0);
-            let hue = 240 - t * 240;
-            const color = `hsl(${hue}, 100%, 50%)`;
-
-            heatmapChart.data.datasets[0].data.push({x: x_meters, y: y_meters});
-            heatmapChart.data.datasets[0].backgroundColor.push(color);
-            if(heatmapChart.data.datasets[0].data.length > 15000) {
-                heatmapChart.data.datasets[0].data.shift();
-                heatmapChart.data.datasets[0].backgroundColor.shift();
-            }
-
-            heatmapChart.data.datasets[1].data = [{x: x_meters, y: y_meters}];
-            heatmapChart.data.datasets[1].backgroundColor = color; 
-
-            gpsChart.update('none');
-            heatmapChart.update('none');
-            ggChart.update('none');
+            heatmapData[0].x = gpsHistoryX;
+            heatmapData[0].y = gpsHistoryY;
+            heatmapData[0].marker.color = heatmapColor;
+            heatmapData[1].x = [x_meters];
+            heatmapData[1].y = [y_meters];
         }
 
-        // Thermal History Chart 업데이트 (uPlot)
+        // Thermals
         if(latestData.motor_temp !== undefined) {
             updateUPlotData(thermalsData, [latestData.motor_temp, latestData.inverter_temp, latestData.battery_temp]);
         }
 
-        // G-G Diagram 데이터 푸시 (Chart.js)
-        const ggHistory = ggChart.data.datasets[0].data;
-        ggHistory.push({x: emaAy, y: emaAx});
-        if(ggHistory.length > 100) ggHistory.shift();
-        ggChart.data.datasets[1].data = [{x: emaAy, y: emaAx}];
+        // G-G Diagram
+        ggHistoryX.push(emaAy);
+        ggHistoryY.push(emaAx);
+        if(ggHistoryX.length > 100) { ggHistoryX.shift(); ggHistoryY.shift(); }
+        ggData[0].x = ggHistoryX;
+        ggData[0].y = ggHistoryY;
+        ggData[1].x = [emaAy];
+        ggData[1].y = [emaAx];
 
-        // RPM Warning UI 업데이트
         const rpmEl = document.getElementById('rpm-value');
         if(latestData.rpm > 10000) {
             rpmEl.style.color = '#f43f5e';
@@ -322,7 +306,7 @@ setInterval(() => {
         }
     }
     
-    // 차트 데이터 밀어내기 (uPlot)
+    // uPlot 데이터 밀어내기
     updateUPlotData(rpmData, [latestData.rpm]);
     updateUPlotData(speedData, [latestData.speed]);
     updateUPlotData(voltageData, [latestData.pack_voltage]);
@@ -332,33 +316,38 @@ setInterval(() => {
         updateUPlotData(driverData, [latestData.throttle_pedal, latestData.brake_pressure]);
     }
     
-    // FOC Scatter Data Push (Chart.js)
-    focChart.data.datasets[0].data.push({x: latestData.rpm, y: latestData.id});
-    focChart.data.datasets[1].data.push({x: latestData.rpm, y: latestData.iq});
-    if(focChart.data.datasets[0].data.length > 3000) {
-        focChart.data.datasets[0].data.shift();
-        focChart.data.datasets[1].data.shift();
+    // FOC Scatter
+    focHistoryX.push(latestData.rpm);
+    focHistoryId.push(latestData.id);
+    focHistoryIq.push(latestData.iq);
+    if(focHistoryX.length > 3000) {
+        focHistoryX.shift(); focHistoryId.shift(); focHistoryIq.shift();
     }
+    focData[0].x = focHistoryX;
+    focData[0].y = focHistoryId;
+    focData[1].x = focHistoryX;
+    focData[1].y = focHistoryIq;
     
     renderCounter++;
     if (renderCounter % 2 === 0) {
-        // uPlot 일괄 렌더링
-        rpmPlot.setData(rpmData);
-        speedPlot.setData(speedData);
-        motorPlot.setData(motorData);
-        voltagePlot.setData(voltageData);
-        imuPlot.setData(imuData);
-        driverPlot.setData(driverData);
-        thermalsPlot.setData(thermalsData);
+        // uPlot 렌더링
+        if(rpmPlot) rpmPlot.setData(rpmData);
+        if(speedPlot) speedPlot.setData(speedData);
+        if(motorPlot) motorPlot.setData(motorData);
+        if(voltagePlot) voltagePlot.setData(voltageData);
+        if(imuPlot) imuPlot.setData(imuData);
+        if(driverPlot) driverPlot.setData(driverData);
+        if(thermalsPlot) thermalsPlot.setData(thermalsData);
         
-        focChart.update('none');
+        // Plotly 렌더링
+        Plotly.react('gpsChart', gpsData, gpsLayout);
+        Plotly.react('ggChart', ggData, ggLayout);
+        Plotly.react('heatmapChart', heatmapData, heatmapLayout);
+        Plotly.react('focChart', focData, focLayout);
     }
-
 }, 50);
 
-// ----------------------------------------------------
-// WebSocket Connection
-// ----------------------------------------------------
+// WebSocket
 const WS_URL = 'wss://gef27test.store/ws?token=GBungE-FSAE-token';
 const statusBadge = document.getElementById('connection-status');
 const statusText = statusBadge.querySelector('.status-text');
@@ -366,30 +355,20 @@ let ws;
 
 function connectWebSocket() {
     ws = new WebSocket(WS_URL);
-    ws.onopen = () => {
-        statusBadge.className = 'status-badge connected';
-        statusText.textContent = 'LIVE';
-    };
-
+    ws.onopen = () => { statusBadge.className = 'status-badge connected'; statusText.textContent = 'LIVE'; };
     ws.onmessage = (event) => {
         try {
             const data = JSON.parse(event.data);
             if(Array.isArray(data)) {
                 for (const frame of data) {
-                    if (frame.rpm !== undefined) {
-                        playoutQueue.push(frame);
-                    }
+                    if (frame.rpm !== undefined) playoutQueue.push(frame);
                 }
-                if (playoutQueue.length > 20) {
-                    playoutQueue = playoutQueue.slice(playoutQueue.length - 20);
-                }
+                if (playoutQueue.length > 20) playoutQueue = playoutQueue.slice(playoutQueue.length - 20);
             }
-        } catch (e) { console.error(e); }
+        } catch (e) {}
     };
-
     ws.onclose = () => {
-        statusBadge.className = 'status-badge disconnected';
-        statusText.textContent = 'RECONNECTING...';
+        statusBadge.className = 'status-badge disconnected'; statusText.textContent = 'RECONNECTING...';
         setTimeout(connectWebSocket, 3000);
     };
 }
