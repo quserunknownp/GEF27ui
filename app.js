@@ -86,7 +86,7 @@ const imuPlot = initUPlot('imuChart', makeUPlotOpts([
     { stroke: 'rgba(239, 68, 68, 0.3)', width: 1, label: 'ax(raw)', dash: [5,5] },
     { stroke: 'rgba(34, 197, 94, 0.3)', width: 1, label: 'ay(raw)', dash: [5,5] },
     { stroke: 'rgba(59, 130, 246, 0.3)', width: 1, label: 'az(raw)', dash: [5,5] }
-], { legend: { show: true }, scales: { x: { time: false }, y: { range: [-30, 30] } } }), imuData);
+], { legend: { show: true } }), imuData);
 
 // 8. Thermal History Chart (uPlot)
 const THERMAL_POINTS = 500;
