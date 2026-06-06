@@ -11,6 +11,14 @@ document.querySelectorAll('.tab-btn').forEach(button => {
         } else {
             document.getElementById(target).classList.add('active');
         }
+        
+        // Plotly charts render small if initialized in a hidden tab. Resize them here!
+        setTimeout(() => {
+            ['gpsChart', 'ggChart', 'heatmapChart', 'focChart'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) Plotly.Plots.resize(el);
+            });
+        }, 10);
     });
 });
 
