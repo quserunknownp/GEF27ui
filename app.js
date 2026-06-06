@@ -285,9 +285,9 @@ setInterval(() => {
             gpsLayout.xaxis.autorange = false;
             gpsLayout.yaxis.autorange = false;
 
-            heatmapData[0].x = gpsHistoryX;
-            heatmapData[0].y = gpsHistoryY;
-            heatmapData[0].marker.color = heatmapColor;
+            heatmapData[0].x = gpsHistoryX.slice();
+            heatmapData[0].y = gpsHistoryY.slice();
+            heatmapData[0].marker.color = heatmapColor.slice();
             heatmapData[1].x = [x_meters];
             heatmapData[1].y = [y_meters];
         }
@@ -301,8 +301,8 @@ setInterval(() => {
         ggHistoryX.push(emaAy);
         ggHistoryY.push(emaAx);
         if(ggHistoryX.length > 100) { ggHistoryX.shift(); ggHistoryY.shift(); }
-        ggData[0].x = ggHistoryX;
-        ggData[0].y = ggHistoryY;
+        ggData[0].x = ggHistoryX.slice();
+        ggData[0].y = ggHistoryY.slice();
         ggData[1].x = [emaAy];
         ggData[1].y = [emaAx];
 
@@ -333,10 +333,10 @@ setInterval(() => {
     if(focHistoryX.length > 3000) {
         focHistoryX.shift(); focHistoryId.shift(); focHistoryIq.shift();
     }
-    focData[0].x = focHistoryX;
-    focData[0].y = focHistoryId;
-    focData[1].x = focHistoryX;
-    focData[1].y = focHistoryIq;
+    focData[0].x = focHistoryX.slice();
+    focData[0].y = focHistoryId.slice();
+    focData[1].x = focHistoryX.slice();
+    focData[1].y = focHistoryIq.slice();
     
     renderCounter++;
     if (renderCounter % 2 === 0) {
