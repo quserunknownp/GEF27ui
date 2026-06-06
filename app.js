@@ -273,8 +273,8 @@ setInterval(() => {
             const steerPointX = x_meters + 15 * Math.sin(steeringRad);
             const steerPointY = y_meters + 15 * Math.cos(steeringRad);
             
-            gpsData[0].x = gpsHistoryX;
-            gpsData[0].y = gpsHistoryY;
+            gpsData[0].x = gpsHistoryX.slice(-100);
+            gpsData[0].y = gpsHistoryY.slice(-100);
             gpsData[1].x = [x_meters, headingPointX];
             gpsData[1].y = [y_meters, headingPointY];
             gpsData[2].x = [x_meters, steerPointX];
@@ -282,6 +282,8 @@ setInterval(() => {
             
             gpsLayout.xaxis.range = [x_meters - 30, x_meters + 30];
             gpsLayout.yaxis.range = [y_meters - 30, y_meters + 30];
+            gpsLayout.xaxis.autorange = false;
+            gpsLayout.yaxis.autorange = false;
 
             heatmapData[0].x = gpsHistoryX;
             heatmapData[0].y = gpsHistoryY;
