@@ -57,21 +57,21 @@ function initUPlot(containerId, opts, initialData) {
 
 // 1. RPM & Speed (uPlot)
 const rpmData = [ [...uplotX], Array(UPLOT_POINTS).fill(0) ];
-const rpmPlot = initUPlot('rpmChart', makeUPlotOpts([ { stroke: '#38bdf8', width: 3, fill: 'rgba(56, 189, 248, 0.1)' } ], { scales: { x: { time: false }, y: { range: [0, 12000] } } }), rpmData);
+const rpmPlot = initUPlot('rpmChart', makeUPlotOpts([ { stroke: '#38bdf8', width: 3, fill: 'rgba(56, 189, 248, 0.1)' } ]), rpmData);
 
 const speedData = [ [...uplotX], Array(UPLOT_POINTS).fill(0) ];
-const speedPlot = initUPlot('speedChart', makeUPlotOpts([ { stroke: '#f43f5e', width: 3, fill: 'rgba(244, 63, 94, 0.1)' } ], { scales: { x: { time: false }, y: { range: [0, 150] } } }), speedData);
+const speedPlot = initUPlot('speedChart', makeUPlotOpts([ { stroke: '#f43f5e', width: 3, fill: 'rgba(244, 63, 94, 0.1)' } ]), speedData);
 
 // 2. Motor (Id, Iq) (uPlot)
 const motorData = [ [...uplotX], Array(UPLOT_POINTS).fill(0), Array(UPLOT_POINTS).fill(0) ];
 const motorPlot = initUPlot('motorChart', makeUPlotOpts([
     { stroke: '#c084fc', width: 2, label: 'Id' },
     { stroke: '#f472b6', width: 2, label: 'Iq' }
-], { legend: { show: true }, scales: { x: { time: false }, y: { range: [-300, 300] } } }), motorData);
+], { legend: { show: true } }), motorData);
 
 // 3. Voltage (uPlot)
 const voltageData = [ [...uplotX], Array(UPLOT_POINTS).fill(0) ];
-const voltagePlot = initUPlot('voltageChart', makeUPlotOpts([ { stroke: '#facc15', width: 3, fill: 'rgba(250, 204, 21, 0.1)' } ], { scales: { x: { time: false }, y: { range: [0, 500] } } }), voltageData);
+const voltagePlot = initUPlot('voltageChart', makeUPlotOpts([ { stroke: '#facc15', width: 3, fill: 'rgba(250, 204, 21, 0.1)' } ]), voltageData);
 
 // 4. IMU (ax, ay, az) (uPlot)
 const imuData = [ 
@@ -136,7 +136,7 @@ const heatmapData = [
     { x: [], y: [], mode: 'markers', type: 'scattergl', marker: { color: [], colorscale: 'Jet', cmin: 0, cmax: 120, size: 5 } },
     { x: [], y: [], mode: 'markers', type: 'scattergl', marker: { color: '#ffffff', size: 12, line: {color: '#111827', width: 3} } }
 ];
-const heatmapLayout = { ...layoutCommon, xaxis: { gridcolor: 'rgba(255,255,255,0.05)', range: [-300, 300] }, yaxis: { gridcolor: 'rgba(255,255,255,0.05)', range: [-300, 300], scaleanchor: 'x', scaleratio: 1 } };
+const heatmapLayout = { ...layoutCommon, xaxis: { gridcolor: 'rgba(255,255,255,0.05)' }, yaxis: { gridcolor: 'rgba(255,255,255,0.05)', scaleanchor: 'x', scaleratio: 1 } };
 Plotly.newPlot('heatmapChart', heatmapData, heatmapLayout, {responsive: true, displayModeBar: false});
 
 // 10. FOC Chart (Plotly - scattergl)
@@ -144,7 +144,7 @@ const focData = [
     { x: [], y: [], mode: 'markers', type: 'scattergl', marker: { color: '#c084fc', size: 4 }, name: 'Id' },
     { x: [], y: [], mode: 'markers', type: 'scattergl', marker: { color: '#f472b6', size: 4 }, name: 'Iq' }
 ];
-const focLayout = { ...layoutCommon, showlegend: true, xaxis: { gridcolor: 'rgba(255,255,255,0.05)', range: [0, 12000] }, yaxis: { gridcolor: 'rgba(255,255,255,0.05)', range: [-300, 300] } };
+const focLayout = { ...layoutCommon, showlegend: true, xaxis: { gridcolor: 'rgba(255,255,255,0.05)' }, yaxis: { gridcolor: 'rgba(255,255,255,0.05)' } };
 Plotly.newPlot('focChart', focData, focLayout, {responsive: true, displayModeBar: false});
 
 // ----------------------------------------------------
