@@ -144,7 +144,7 @@ const heatmapData = [
     { x: [], y: [], mode: 'markers', type: 'scattergl', marker: { color: [], colorscale: 'Jet', cmin: 0, cmax: 120, size: 5 } },
     { x: [], y: [], mode: 'markers', type: 'scattergl', marker: { color: '#ffffff', size: 12, line: {color: '#111827', width: 3} } }
 ];
-const heatmapLayout = { ...layoutCommon, xaxis: { gridcolor: 'rgba(255,255,255,0.05)' }, yaxis: { gridcolor: 'rgba(255,255,255,0.05)', scaleanchor: 'x', scaleratio: 1 } };
+const heatmapLayout = { ...layoutCommon, xaxis: { gridcolor: 'rgba(255,255,255,0.05)', range: [-300, 300] }, yaxis: { gridcolor: 'rgba(255,255,255,0.05)', range: [-300, 300], scaleanchor: 'x', scaleratio: 1 } };
 Plotly.newPlot('heatmapChart', heatmapData, heatmapLayout, {responsive: true, displayModeBar: false});
 
 // 10. FOC Chart (Plotly - scattergl)
@@ -152,7 +152,7 @@ const focData = [
     { x: [], y: [], mode: 'markers', type: 'scattergl', marker: { color: '#c084fc', size: 4 }, name: 'Id' },
     { x: [], y: [], mode: 'markers', type: 'scattergl', marker: { color: '#f472b6', size: 4 }, name: 'Iq' }
 ];
-const focLayout = { ...layoutCommon, showlegend: true, xaxis: { gridcolor: 'rgba(255,255,255,0.05)' }, yaxis: { gridcolor: 'rgba(255,255,255,0.05)' } };
+const focLayout = { ...layoutCommon, showlegend: true, xaxis: { gridcolor: 'rgba(255,255,255,0.05)', range: [0, 12000] }, yaxis: { gridcolor: 'rgba(255,255,255,0.05)', range: [-300, 300] } };
 Plotly.newPlot('focChart', focData, focLayout, {responsive: true, displayModeBar: false});
 
 // ----------------------------------------------------
