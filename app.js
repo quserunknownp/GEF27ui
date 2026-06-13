@@ -24,7 +24,7 @@ document.querySelectorAll('.tab-btn').forEach(button => {
 
 // --- uPlot Configuration & Helpers ---
 const UPLOT_POINTS = 200;
-const uplotX = Array.from({length: UPLOT_POINTS}, (_, i) => i);
+const uplotX = Array.from({length: UPLOT_POINTS}, () => 0);
 
 const uPlots = [];
 const ro = new ResizeObserver(entries => {
@@ -98,7 +98,7 @@ const imuPlot = initUPlot('imuChart', makeUPlotOpts([
 
 // 8. Thermal History Chart (uPlot)
 const THERMAL_POINTS = 500;
-const thermalsX = Array.from({length: THERMAL_POINTS}, (_, i) => i);
+const thermalsX = Array.from({length: THERMAL_POINTS}, () => 0);
 const thermalsData = [ [...thermalsX], Array(THERMAL_POINTS).fill(0), Array(THERMAL_POINTS).fill(0), Array(THERMAL_POINTS).fill(0) ];
 const thermalsPlot = initUPlot('thermalsChart', makeUPlotOpts([
     { stroke: '#ef4444', width: 2, fill: 'rgba(239, 68, 68, 0.1)', label: 'Motor' },
@@ -156,10 +156,9 @@ const focLayout = { ...layoutCommon, showlegend: true, xaxis: { gridcolor: 'rgba
 Plotly.newPlot('focChart', focData, focLayout, {responsive: true, displayModeBar: false});
 
 // ----------------------------------------------------
-// 재생 큐 (Playout Queue) 및 상태 변수
+// 상태 변수
 // ----------------------------------------------------
-let playoutQueue = [];
-let latestData = { rpm:0, speed:0, id:0, iq:0, pack_voltage:0, ax:0, ay:0, az:9.81, gps1_lat:0, gps1_lon:0 };
+let latestData = { timestamp:0, rpm:0, speed:0, id:0, iq:0, pack_voltage:0, ax:0, ay:0, az:9.81, gps1_lat:0, gps1_lon:0 };
 
 const alpha = 0.15; 
 let emaAx = 0, emaAy = 0, emaAz = 9.81;
@@ -177,19 +176,20 @@ let focHistoryX = [];
 let focHistoryId = [];
 let focHistoryIq = [];
 
-function updateUPlotData(dataArray, newValues) {
+function updateUPlotData(dataArray, newValues, timestamp) {
+    dataArray[0].push(timestamp);
+    dataArray[0].shift();
     for (let i = 0; i < newValues.length; i++) {
         dataArray[i+1].push(newValues[i]);
         dataArray[i+1].shift();
     }
 }
 
-// 20Hz (50ms) 렌더링 루프
-setInterval(() => {
-    if (playoutQueue.length > 0) {
-        latestData = playoutQueue.shift();
-        
-        emaAx = (alpha * latestData.ax) + ((1 - alpha) * emaAx);
+// 데이터 처리 함수 (수신 즉시 실행)
+function processFrame(frameData) {
+    latestData = frameData;
+    
+    emaAx = (alpha * latestData.ax) + ((1 - alpha) * emaAx);
         emaAy = (alpha * latestData.ay) + ((1 - alpha) * emaAy);
         emaAz = (alpha * latestData.az) + ((1 - alpha) * emaAz);
 
@@ -294,7 +294,7 @@ setInterval(() => {
 
         // Thermals
         if(latestData.motor_temp !== undefined) {
-            updateUPlotData(thermalsData, [latestData.motor_temp, latestData.inverter_temp, latestData.battery_temp]);
+            updateUPlotData(thermalsData, [latestData.motor_temp, latestData.inverter_temp, latestData.battery_temp], latestData.timestamp);
         }
 
         // G-G Diagram
@@ -314,16 +314,15 @@ setInterval(() => {
             rpmEl.style.color = '#38bdf8';
             rpmEl.style.textShadow = '0 0 30px rgba(56, 189, 248, 0.4)';
         }
-    }
     
     // uPlot 데이터 밀어내기
-    updateUPlotData(rpmData, [latestData.rpm]);
-    updateUPlotData(speedData, [latestData.speed]);
-    updateUPlotData(voltageData, [latestData.pack_voltage]);
-    updateUPlotData(motorData, [latestData.id, latestData.iq]);
-    updateUPlotData(imuData, [emaAx, emaAy, emaAz, latestData.ax, latestData.ay, latestData.az]);
+    updateUPlotData(rpmData, [latestData.rpm], latestData.timestamp);
+    updateUPlotData(speedData, [latestData.speed], latestData.timestamp);
+    updateUPlotData(voltageData, [latestData.pack_voltage], latestData.timestamp);
+    updateUPlotData(motorData, [latestData.id, latestData.iq], latestData.timestamp);
+    updateUPlotData(imuData, [emaAx, emaAy, emaAz, latestData.ax, latestData.ay, latestData.az], latestData.timestamp);
     if(latestData.throttle_pedal !== undefined) {
-        updateUPlotData(driverData, [latestData.throttle_pedal, latestData.brake_pressure]);
+        updateUPlotData(driverData, [latestData.throttle_pedal, latestData.brake_pressure], latestData.timestamp);
     }
     
     // FOC Scatter
@@ -337,25 +336,24 @@ setInterval(() => {
     focData[0].y = focHistoryId.slice();
     focData[1].x = focHistoryX.slice();
     focData[1].y = focHistoryIq.slice();
+}
+
+function renderAllCharts() {
+    // uPlot 렌더링
+    if(rpmPlot) rpmPlot.setData(rpmData);
+    if(speedPlot) speedPlot.setData(speedData);
+    if(motorPlot) motorPlot.setData(motorData);
+    if(voltagePlot) voltagePlot.setData(voltageData);
+    if(imuPlot) imuPlot.setData(imuData);
+    if(driverPlot) driverPlot.setData(driverData);
+    if(thermalsPlot) thermalsPlot.setData(thermalsData);
     
-    renderCounter++;
-    if (renderCounter % 2 === 0) {
-        // uPlot 렌더링
-        if(rpmPlot) rpmPlot.setData(rpmData);
-        if(speedPlot) speedPlot.setData(speedData);
-        if(motorPlot) motorPlot.setData(motorData);
-        if(voltagePlot) voltagePlot.setData(voltageData);
-        if(imuPlot) imuPlot.setData(imuData);
-        if(driverPlot) driverPlot.setData(driverData);
-        if(thermalsPlot) thermalsPlot.setData(thermalsData);
-        
-        // Plotly 렌더링
-        Plotly.react('gpsChart', gpsData, gpsLayout);
-        Plotly.react('ggChart', ggData, ggLayout);
-        Plotly.react('heatmapChart', heatmapData, heatmapLayout);
-        Plotly.react('focChart', focData, focLayout);
-    }
-}, 50);
+    // Plotly 렌더링
+    Plotly.react('gpsChart', gpsData, gpsLayout);
+    Plotly.react('ggChart', ggData, ggLayout);
+    Plotly.react('heatmapChart', heatmapData, heatmapLayout);
+    Plotly.react('focChart', focData, focLayout);
+}
 
 // WebSocket
 const WS_URL = 'wss://gef27test.store/ws?token=GBungE-FSAE-token';
@@ -371,9 +369,9 @@ function connectWebSocket() {
             const data = JSON.parse(event.data);
             if(Array.isArray(data)) {
                 for (const frame of data) {
-                    if (frame.rpm !== undefined) playoutQueue.push(frame);
+                    if (frame.rpm !== undefined) processFrame(frame);
                 }
-                if (playoutQueue.length > 20) playoutQueue = playoutQueue.slice(playoutQueue.length - 20);
+                renderAllCharts();
             }
         } catch (e) {}
     };
