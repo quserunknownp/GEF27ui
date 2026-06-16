@@ -24,7 +24,7 @@ document.querySelectorAll('.tab-btn').forEach(button => {
 
 // --- uPlot Configuration & Helpers ---
 const UPLOT_POINTS = 200;
-const uplotX = Array.from({length: UPLOT_POINTS}, () => 0);
+const THERMAL_POINTS = 500;
 
 const uPlots = [];
 const ro = new ResizeObserver(entries => {
@@ -64,29 +64,25 @@ function initUPlot(containerId, opts, initialData) {
 }
 
 // 1. RPM & Speed (uPlot)
-const rpmData = [ [...uplotX], Array(UPLOT_POINTS).fill(0) ];
+const rpmData = [ [], [] ];
 const rpmPlot = initUPlot('rpmChart', makeUPlotOpts([ { stroke: '#38bdf8', width: 3, fill: 'rgba(56, 189, 248, 0.1)' } ]), rpmData);
 
-const speedData = [ [...uplotX], Array(UPLOT_POINTS).fill(0) ];
+const speedData = [ [], [] ];
 const speedPlot = initUPlot('speedChart', makeUPlotOpts([ { stroke: '#f43f5e', width: 3, fill: 'rgba(244, 63, 94, 0.1)' } ]), speedData);
 
 // 2. Motor (Id, Iq) (uPlot)
-const motorData = [ [...uplotX], Array(UPLOT_POINTS).fill(0), Array(UPLOT_POINTS).fill(0) ];
+const motorData = [ [], [], [] ];
 const motorPlot = initUPlot('motorChart', makeUPlotOpts([
     { stroke: '#c084fc', width: 2, label: 'Id' },
     { stroke: '#f472b6', width: 2, label: 'Iq' }
 ], { legend: { show: true } }), motorData);
 
 // 3. Voltage (uPlot)
-const voltageData = [ [...uplotX], Array(UPLOT_POINTS).fill(0) ];
+const voltageData = [ [], [] ];
 const voltagePlot = initUPlot('voltageChart', makeUPlotOpts([ { stroke: '#facc15', width: 3, fill: 'rgba(250, 204, 21, 0.1)' } ]), voltageData);
 
 // 4. IMU (ax, ay, az) (uPlot)
-const imuData = [ 
-    [...uplotX], 
-    Array(UPLOT_POINTS).fill(0), Array(UPLOT_POINTS).fill(0), Array(UPLOT_POINTS).fill(0), // Filtered
-    Array(UPLOT_POINTS).fill(0), Array(UPLOT_POINTS).fill(0), Array(UPLOT_POINTS).fill(0)  // Raw
-];
+const imuData = [ [], [], [], [], [], [], [] ];
 const imuPlot = initUPlot('imuChart', makeUPlotOpts([
     { stroke: '#ef4444', width: 3, label: 'ax' },
     { stroke: '#22c55e', width: 3, label: 'ay' },
@@ -97,9 +93,7 @@ const imuPlot = initUPlot('imuChart', makeUPlotOpts([
 ], { legend: { show: true } }), imuData);
 
 // 8. Thermal History Chart (uPlot)
-const THERMAL_POINTS = 500;
-const thermalsX = Array.from({length: THERMAL_POINTS}, () => 0);
-const thermalsData = [ [...thermalsX], Array(THERMAL_POINTS).fill(0), Array(THERMAL_POINTS).fill(0), Array(THERMAL_POINTS).fill(0) ];
+const thermalsData = [ [], [], [], [] ];
 const thermalsPlot = initUPlot('thermalsChart', makeUPlotOpts([
     { stroke: '#ef4444', width: 2, fill: 'rgba(239, 68, 68, 0.1)', label: 'Motor' },
     { stroke: '#f97316', width: 2, fill: 'rgba(249, 115, 22, 0.1)', label: 'Inverter' },
@@ -107,7 +101,7 @@ const thermalsPlot = initUPlot('thermalsChart', makeUPlotOpts([
 ], { legend: { show: true }, scales: { x: {time: false}, y: {range: [20, 100]} }, axes: [{show:false}, {stroke:"#94a3b8", grid:{stroke:"rgba(255,255,255,0.05)"}, values: (u, vals) => vals.map(v => v.toFixed(0)) }] }), thermalsData);
 
 // 9. Driver Chart (uPlot)
-const driverData = [ [...uplotX], Array(UPLOT_POINTS).fill(0), Array(UPLOT_POINTS).fill(0) ];
+const driverData = [ [], [], [] ];
 const driverPlot = initUPlot('driverChart', makeUPlotOpts([
     { stroke: '#22c55e', width: 2, label: 'Throttle' },
     { stroke: '#ef4444', width: 2, label: 'Brake' }
@@ -176,12 +170,12 @@ let focHistoryX = [];
 let focHistoryId = [];
 let focHistoryIq = [];
 
-function updateUPlotData(dataArray, newValues, timestamp) {
+function updateUPlotData(dataArray, newValues, timestamp, maxPoints = 200) {
     dataArray[0].push(timestamp);
-    dataArray[0].shift();
+    if (dataArray[0].length > maxPoints) dataArray[0].shift();
     for (let i = 0; i < newValues.length; i++) {
         dataArray[i+1].push(newValues[i]);
-        dataArray[i+1].shift();
+        if (dataArray[i+1].length > maxPoints) dataArray[i+1].shift();
     }
 }
 
@@ -294,7 +288,7 @@ function processFrame(frameData) {
 
         // Thermals
         if(latestData.motor_temp !== undefined) {
-            updateUPlotData(thermalsData, [latestData.motor_temp, latestData.inverter_temp, latestData.battery_temp], latestData.timestamp);
+            updateUPlotData(thermalsData, [latestData.motor_temp, latestData.inverter_temp, latestData.battery_temp], latestData.timestamp, THERMAL_POINTS);
         }
 
         // G-G Diagram
