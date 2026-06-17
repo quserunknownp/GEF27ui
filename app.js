@@ -333,49 +333,51 @@ function processFrame(frameData) {
 }
 
 let isDirtyUPlot = false;
-let isDirtyPlotly = false;
-
-function renderUPlot() {
-    if(rpmPlot) rpmPlot.setData(rpmData);
-    if(speedPlot) speedPlot.setData(speedData);
-    if(motorPlot) motorPlot.setData(motorData);
-    if(voltagePlot) voltagePlot.setData(voltageData);
-    if(imuPlot) imuPlot.setData(imuData);
-    if(driverPlot) driverPlot.setData(driverData);
-    if(thermalsPlot) thermalsPlot.setData(thermalsData);
-    isDirtyUPlot = false;
-}
-
-function renderPlotly() {
-    const activeTab = document.querySelector('.tab-btn.active').dataset.target;
-    if (activeTab === 'all' || activeTab === 'gps') {
-        Plotly.react('gpsChart', gpsData, gpsLayout);
-    }
-    if (activeTab === 'all' || activeTab === 'gg') {
-        Plotly.react('ggChart', ggData, ggLayout);
-        Plotly.react('focChart', focData, focLayout);
-    }
-    if (activeTab === 'all' || activeTab === 'thermals') {
-        Plotly.react('heatmapChart', heatmapData, heatmapLayout);
-    }
-    isDirtyPlotly = false;
-}
+let isDirtyPlotly10Hz = false;
+let isDirtyPlotly4Hz = false;
 
 function renderAllCharts() {
     isDirtyUPlot = true;
-    isDirtyPlotly = true;
+    isDirtyPlotly10Hz = true;
+    isDirtyPlotly4Hz = true;
 }
 
-// 60FPS loop for fast uPlot charts
-function loopUPlot() {
-    if (isDirtyUPlot) renderUPlot();
-    requestAnimationFrame(loopUPlot);
+// 60FPS loop for fast uPlot charts and 10Hz minimap
+function loopFast() {
+    if (isDirtyUPlot) {
+        if(rpmPlot) rpmPlot.setData(rpmData);
+        if(speedPlot) speedPlot.setData(speedData);
+        if(motorPlot) motorPlot.setData(motorData);
+        if(voltagePlot) voltagePlot.setData(voltageData);
+        if(imuPlot) imuPlot.setData(imuData);
+        if(driverPlot) driverPlot.setData(driverData);
+        if(thermalsPlot) thermalsPlot.setData(thermalsData);
+        isDirtyUPlot = false;
+    }
+    if (isDirtyPlotly10Hz) {
+        const activeTab = document.querySelector('.tab-btn.active').dataset.target;
+        if (activeTab === 'all' || activeTab === 'gps') {
+            Plotly.react('gpsChart', gpsData, gpsLayout);
+        }
+        isDirtyPlotly10Hz = false;
+    }
+    requestAnimationFrame(loopFast);
 }
-requestAnimationFrame(loopUPlot);
+requestAnimationFrame(loopFast);
 
-// 4FPS Throttle for heavy Plotly WebGL charts
+// 4FPS Throttle for heavy Plotly WebGL charts (Heatmap, FOC, GG)
 setInterval(() => {
-    if (isDirtyPlotly) renderPlotly();
+    if (isDirtyPlotly4Hz) {
+        const activeTab = document.querySelector('.tab-btn.active').dataset.target;
+        if (activeTab === 'all' || activeTab === 'gg') {
+            Plotly.react('ggChart', ggData, ggLayout);
+            Plotly.react('focChart', focData, focLayout);
+        }
+        if (activeTab === 'all' || activeTab === 'thermals') {
+            Plotly.react('heatmapChart', heatmapData, heatmapLayout);
+        }
+        isDirtyPlotly4Hz = false;
+    }
 }, 250);
 
 // WebSocket
