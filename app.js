@@ -234,7 +234,7 @@ function processFrame(frameData) {
             gpsHistoryY.push(y_meters);
             heatmapColor.push(latestData.speed);
 
-            if(gpsHistoryX.length > 15000) {
+            if(gpsHistoryX.length > 3000) {
                 gpsHistoryX.shift();
                 gpsHistoryY.shift();
                 heatmapColor.shift();
