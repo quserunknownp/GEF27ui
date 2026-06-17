@@ -332,8 +332,10 @@ function processFrame(frameData) {
     focData[1].y = focHistoryIq.slice();
 }
 
-function renderAllCharts() {
-    // uPlot 렌더링
+let isDirtyUPlot = false;
+let isDirtyPlotly = false;
+
+function renderUPlot() {
     if(rpmPlot) rpmPlot.setData(rpmData);
     if(speedPlot) speedPlot.setData(speedData);
     if(motorPlot) motorPlot.setData(motorData);
@@ -341,13 +343,40 @@ function renderAllCharts() {
     if(imuPlot) imuPlot.setData(imuData);
     if(driverPlot) driverPlot.setData(driverData);
     if(thermalsPlot) thermalsPlot.setData(thermalsData);
-    
-    // Plotly 렌더링
-    Plotly.react('gpsChart', gpsData, gpsLayout);
-    Plotly.react('ggChart', ggData, ggLayout);
-    Plotly.react('heatmapChart', heatmapData, heatmapLayout);
-    Plotly.react('focChart', focData, focLayout);
+    isDirtyUPlot = false;
 }
+
+function renderPlotly() {
+    const activeTab = document.querySelector('.tab-btn.active').dataset.target;
+    if (activeTab === 'all' || activeTab === 'gps') {
+        Plotly.react('gpsChart', gpsData, gpsLayout);
+    }
+    if (activeTab === 'all' || activeTab === 'gg') {
+        Plotly.react('ggChart', ggData, ggLayout);
+        Plotly.react('focChart', focData, focLayout);
+    }
+    if (activeTab === 'all' || activeTab === 'thermals') {
+        Plotly.react('heatmapChart', heatmapData, heatmapLayout);
+    }
+    isDirtyPlotly = false;
+}
+
+function renderAllCharts() {
+    isDirtyUPlot = true;
+    isDirtyPlotly = true;
+}
+
+// 60FPS loop for fast uPlot charts
+function loopUPlot() {
+    if (isDirtyUPlot) renderUPlot();
+    requestAnimationFrame(loopUPlot);
+}
+requestAnimationFrame(loopUPlot);
+
+// 4FPS Throttle for heavy Plotly WebGL charts
+setInterval(() => {
+    if (isDirtyPlotly) renderPlotly();
+}, 250);
 
 // WebSocket
 const WS_URL = 'wss://gef27test.store/ws?token=GBungE-FSAE-token';
