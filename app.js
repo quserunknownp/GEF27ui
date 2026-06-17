@@ -179,9 +179,19 @@ function updateUPlotData(dataArray, newValues, timestamp, maxPoints = 200) {
     }
 }
 
+let lastSeqNum = -1;
+let totalLossCount = 0;
+
 // 데이터 처리 함수 (수신 즉시 실행)
 function processFrame(frameData) {
     latestData = frameData;
+    
+    if (lastSeqNum !== -1 && latestData.seq_num > lastSeqNum + 1) {
+        totalLossCount += (latestData.seq_num - lastSeqNum - 1);
+        document.getElementById('loss-count').textContent = totalLossCount;
+        document.getElementById('loss-status').style.display = 'block';
+    }
+    lastSeqNum = latestData.seq_num;
     
     emaAx = (alpha * latestData.ax) + ((1 - alpha) * emaAx);
         emaAy = (alpha * latestData.ay) + ((1 - alpha) * emaAy);

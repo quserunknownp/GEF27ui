@@ -11,9 +11,14 @@
     <div class="dashboard-container">
         <header class="top-bar">
             <h1 class="logo">FSAE <span>TELEMETRY</span></h1>
-            <div id="connection-status" class="status-badge disconnected">
-                <span class="pulse-dot"></span>
-                <span class="status-text">Connecting...</span>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div id="loss-status" class="status-badge" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); color: #ef4444; display: none;">
+                    Total Loss: <span id="loss-count">0</span>
+                </div>
+                <div id="connection-status" class="status-badge disconnected">
+                    <span class="pulse-dot"></span>
+                    <span class="status-text">Connecting...</span>
+                </div>
             </div>
         </header>
 
