@@ -1,4 +1,22 @@
-// UI Tab Switching Logic
+import sys
+
+with open(r'./index.html', 'r', encoding='utf-8') as f:
+    html = f.read()
+
+# Replace <canvas> with <div> for the 4 charts
+html = html.replace('<canvas id="gpsChart"></canvas>', '<div id="gpsChart" style="width:100%; height:100%;"></div>')
+html = html.replace('<canvas id="ggChart"></canvas>', '<div id="ggChart" style="width:100%; height:100%;"></div>')
+html = html.replace('<canvas id="heatmapChart"></canvas>', '<div id="heatmapChart" style="width:100%; height:100%;"></div>')
+html = html.replace('<canvas id="focChart"></canvas>', '<div id="focChart" style="width:100%; height:100%;"></div>')
+
+# Replace CDN
+html = html.replace('<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>',
+                    '<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>')
+
+with open(r'./index.html', 'w', encoding='utf-8') as f:
+    f.write(html)
+
+app_code = """// UI Tab Switching Logic
 document.querySelectorAll('.tab-btn').forEach(button => {
     button.addEventListener('click', () => {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -11,20 +29,12 @@ document.querySelectorAll('.tab-btn').forEach(button => {
         } else {
             document.getElementById(target).classList.add('active');
         }
-        
-        // Plotly charts render small if initialized in a hidden tab. Resize them here!
-        setTimeout(() => {
-            ['gpsChart', 'ggChart', 'heatmapChart', 'focChart'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) Plotly.Plots.resize(el);
-            });
-        }, 10);
     });
 });
 
 // --- uPlot Configuration & Helpers ---
 const UPLOT_POINTS = 200;
-const THERMAL_POINTS = 500;
+const uplotX = Array.from({length: UPLOT_POINTS}, (_, i) => i);
 
 const uPlots = [];
 const ro = new ResizeObserver(entries => {
@@ -64,25 +74,29 @@ function initUPlot(containerId, opts, initialData) {
 }
 
 // 1. RPM & Speed (uPlot)
-const rpmData = [ [], [] ];
+const rpmData = [ [...uplotX], Array(UPLOT_POINTS).fill(0) ];
 const rpmPlot = initUPlot('rpmChart', makeUPlotOpts([ { stroke: '#38bdf8', width: 3, fill: 'rgba(56, 189, 248, 0.1)' } ]), rpmData);
 
-const speedData = [ [], [] ];
+const speedData = [ [...uplotX], Array(UPLOT_POINTS).fill(0) ];
 const speedPlot = initUPlot('speedChart', makeUPlotOpts([ { stroke: '#f43f5e', width: 3, fill: 'rgba(244, 63, 94, 0.1)' } ]), speedData);
 
 // 2. Motor (Id, Iq) (uPlot)
-const motorData = [ [], [], [] ];
+const motorData = [ [...uplotX], Array(UPLOT_POINTS).fill(0), Array(UPLOT_POINTS).fill(0) ];
 const motorPlot = initUPlot('motorChart', makeUPlotOpts([
     { stroke: '#c084fc', width: 2, label: 'Id' },
     { stroke: '#f472b6', width: 2, label: 'Iq' }
 ], { legend: { show: true } }), motorData);
 
 // 3. Voltage (uPlot)
-const voltageData = [ [], [] ];
+const voltageData = [ [...uplotX], Array(UPLOT_POINTS).fill(0) ];
 const voltagePlot = initUPlot('voltageChart', makeUPlotOpts([ { stroke: '#facc15', width: 3, fill: 'rgba(250, 204, 21, 0.1)' } ]), voltageData);
 
 // 4. IMU (ax, ay, az) (uPlot)
-const imuData = [ [], [], [], [], [], [], [] ];
+const imuData = [ 
+    [...uplotX], 
+    Array(UPLOT_POINTS).fill(0), Array(UPLOT_POINTS).fill(0), Array(UPLOT_POINTS).fill(0), // Filtered
+    Array(UPLOT_POINTS).fill(0), Array(UPLOT_POINTS).fill(0), Array(UPLOT_POINTS).fill(0)  // Raw
+];
 const imuPlot = initUPlot('imuChart', makeUPlotOpts([
     { stroke: '#ef4444', width: 3, label: 'ax' },
     { stroke: '#22c55e', width: 3, label: 'ay' },
@@ -93,7 +107,9 @@ const imuPlot = initUPlot('imuChart', makeUPlotOpts([
 ], { legend: { show: true } }), imuData);
 
 // 8. Thermal History Chart (uPlot)
-const thermalsData = [ [], [], [], [] ];
+const THERMAL_POINTS = 500;
+const thermalsX = Array.from({length: THERMAL_POINTS}, (_, i) => i);
+const thermalsData = [ [...thermalsX], Array(THERMAL_POINTS).fill(0), Array(THERMAL_POINTS).fill(0), Array(THERMAL_POINTS).fill(0) ];
 const thermalsPlot = initUPlot('thermalsChart', makeUPlotOpts([
     { stroke: '#ef4444', width: 2, fill: 'rgba(239, 68, 68, 0.1)', label: 'Motor' },
     { stroke: '#f97316', width: 2, fill: 'rgba(249, 115, 22, 0.1)', label: 'Inverter' },
@@ -101,7 +117,7 @@ const thermalsPlot = initUPlot('thermalsChart', makeUPlotOpts([
 ], { legend: { show: true }, scales: { x: {time: false}, y: {range: [20, 100]} }, axes: [{show:false}, {stroke:"#94a3b8", grid:{stroke:"rgba(255,255,255,0.05)"}, values: (u, vals) => vals.map(v => v.toFixed(0)) }] }), thermalsData);
 
 // 9. Driver Chart (uPlot)
-const driverData = [ [], [], [] ];
+const driverData = [ [...uplotX], Array(UPLOT_POINTS).fill(0), Array(UPLOT_POINTS).fill(0) ];
 const driverPlot = initUPlot('driverChart', makeUPlotOpts([
     { stroke: '#22c55e', width: 2, label: 'Throttle' },
     { stroke: '#ef4444', width: 2, label: 'Brake' }
@@ -138,7 +154,7 @@ const heatmapData = [
     { x: [], y: [], mode: 'markers', type: 'scattergl', marker: { color: [], colorscale: 'Jet', cmin: 0, cmax: 120, size: 5 } },
     { x: [], y: [], mode: 'markers', type: 'scattergl', marker: { color: '#ffffff', size: 12, line: {color: '#111827', width: 3} } }
 ];
-const heatmapLayout = { ...layoutCommon, xaxis: { gridcolor: 'rgba(255,255,255,0.05)', range: [-300, 300] }, yaxis: { gridcolor: 'rgba(255,255,255,0.05)', range: [-300, 300], scaleanchor: 'x', scaleratio: 1 } };
+const heatmapLayout = { ...layoutCommon, xaxis: { gridcolor: 'rgba(255,255,255,0.05)' }, yaxis: { gridcolor: 'rgba(255,255,255,0.05)', scaleanchor: 'x', scaleratio: 1 } };
 Plotly.newPlot('heatmapChart', heatmapData, heatmapLayout, {responsive: true, displayModeBar: false});
 
 // 10. FOC Chart (Plotly - scattergl)
@@ -146,13 +162,14 @@ const focData = [
     { x: [], y: [], mode: 'markers', type: 'scattergl', marker: { color: '#c084fc', size: 4 }, name: 'Id' },
     { x: [], y: [], mode: 'markers', type: 'scattergl', marker: { color: '#f472b6', size: 4 }, name: 'Iq' }
 ];
-const focLayout = { ...layoutCommon, showlegend: true, xaxis: { gridcolor: 'rgba(255,255,255,0.05)', range: [0, 12000] }, yaxis: { gridcolor: 'rgba(255,255,255,0.05)', range: [-300, 300] } };
+const focLayout = { ...layoutCommon, showlegend: true, xaxis: { gridcolor: 'rgba(255,255,255,0.05)' }, yaxis: { gridcolor: 'rgba(255,255,255,0.05)' } };
 Plotly.newPlot('focChart', focData, focLayout, {responsive: true, displayModeBar: false});
 
 // ----------------------------------------------------
-// 상태 변수
+// 재생 큐 (Playout Queue) 및 상태 변수
 // ----------------------------------------------------
-let latestData = { timestamp:0, rpm:0, speed:0, id:0, iq:0, pack_voltage:0, ax:0, ay:0, az:9.81, gps1_lat:0, gps1_lon:0 };
+let playoutQueue = [];
+let latestData = { rpm:0, speed:0, id:0, iq:0, pack_voltage:0, ax:0, ay:0, az:9.81, gps1_lat:0, gps1_lon:0 };
 
 const alpha = 0.15; 
 let emaAx = 0, emaAy = 0, emaAz = 9.81;
@@ -170,30 +187,19 @@ let focHistoryX = [];
 let focHistoryId = [];
 let focHistoryIq = [];
 
-function updateUPlotData(dataArray, newValues, timestamp, maxPoints = 200) {
-    dataArray[0].push(timestamp);
-    if (dataArray[0].length > maxPoints) dataArray[0].shift();
+function updateUPlotData(dataArray, newValues) {
     for (let i = 0; i < newValues.length; i++) {
         dataArray[i+1].push(newValues[i]);
-        if (dataArray[i+1].length > maxPoints) dataArray[i+1].shift();
+        dataArray[i+1].shift();
     }
 }
 
-let lastSeqNum = -1;
-let totalLossCount = 0;
-
-// 데이터 처리 함수 (수신 즉시 실행)
-function processFrame(frameData) {
-    latestData = frameData;
-    
-    if (lastSeqNum !== -1 && latestData.seq_num > lastSeqNum + 1) {
-        totalLossCount += (latestData.seq_num - lastSeqNum - 1);
-        document.getElementById('loss-count').textContent = totalLossCount;
-        document.getElementById('loss-status').style.display = 'block';
-    }
-    lastSeqNum = latestData.seq_num;
-    
-    emaAx = (alpha * latestData.ax) + ((1 - alpha) * emaAx);
+// 20Hz (50ms) 렌더링 루프
+setInterval(() => {
+    if (playoutQueue.length > 0) {
+        latestData = playoutQueue.shift();
+        
+        emaAx = (alpha * latestData.ax) + ((1 - alpha) * emaAx);
         emaAy = (alpha * latestData.ay) + ((1 - alpha) * emaAy);
         emaAz = (alpha * latestData.az) + ((1 - alpha) * emaAz);
 
@@ -244,7 +250,7 @@ function processFrame(frameData) {
             gpsHistoryY.push(y_meters);
             heatmapColor.push(latestData.speed);
 
-            if(gpsHistoryX.length > 3000) {
+            if(gpsHistoryX.length > 15000) {
                 gpsHistoryX.shift();
                 gpsHistoryY.shift();
                 heatmapColor.shift();
@@ -277,8 +283,8 @@ function processFrame(frameData) {
             const steerPointX = x_meters + 15 * Math.sin(steeringRad);
             const steerPointY = y_meters + 15 * Math.cos(steeringRad);
             
-            gpsData[0].x = gpsHistoryX.slice(-100);
-            gpsData[0].y = gpsHistoryY.slice(-100);
+            gpsData[0].x = gpsHistoryX;
+            gpsData[0].y = gpsHistoryY;
             gpsData[1].x = [x_meters, headingPointX];
             gpsData[1].y = [y_meters, headingPointY];
             gpsData[2].x = [x_meters, steerPointX];
@@ -286,27 +292,25 @@ function processFrame(frameData) {
             
             gpsLayout.xaxis.range = [x_meters - 30, x_meters + 30];
             gpsLayout.yaxis.range = [y_meters - 30, y_meters + 30];
-            gpsLayout.xaxis.autorange = false;
-            gpsLayout.yaxis.autorange = false;
 
-            heatmapData[0].x = gpsHistoryX.slice();
-            heatmapData[0].y = gpsHistoryY.slice();
-            heatmapData[0].marker.color = heatmapColor.slice();
+            heatmapData[0].x = gpsHistoryX;
+            heatmapData[0].y = gpsHistoryY;
+            heatmapData[0].marker.color = heatmapColor;
             heatmapData[1].x = [x_meters];
             heatmapData[1].y = [y_meters];
         }
 
         // Thermals
         if(latestData.motor_temp !== undefined) {
-            updateUPlotData(thermalsData, [latestData.motor_temp, latestData.inverter_temp, latestData.battery_temp], latestData.timestamp, THERMAL_POINTS);
+            updateUPlotData(thermalsData, [latestData.motor_temp, latestData.inverter_temp, latestData.battery_temp]);
         }
 
         // G-G Diagram
         ggHistoryX.push(emaAy);
         ggHistoryY.push(emaAx);
         if(ggHistoryX.length > 100) { ggHistoryX.shift(); ggHistoryY.shift(); }
-        ggData[0].x = ggHistoryX.slice();
-        ggData[0].y = ggHistoryY.slice();
+        ggData[0].x = ggHistoryX;
+        ggData[0].y = ggHistoryY;
         ggData[1].x = [emaAy];
         ggData[1].y = [emaAx];
 
@@ -318,15 +322,16 @@ function processFrame(frameData) {
             rpmEl.style.color = '#38bdf8';
             rpmEl.style.textShadow = '0 0 30px rgba(56, 189, 248, 0.4)';
         }
+    }
     
     // uPlot 데이터 밀어내기
-    updateUPlotData(rpmData, [latestData.rpm], latestData.timestamp);
-    updateUPlotData(speedData, [latestData.speed], latestData.timestamp);
-    updateUPlotData(voltageData, [latestData.pack_voltage], latestData.timestamp);
-    updateUPlotData(motorData, [latestData.id, latestData.iq], latestData.timestamp);
-    updateUPlotData(imuData, [emaAx, emaAy, emaAz, latestData.ax, latestData.ay, latestData.az], latestData.timestamp);
+    updateUPlotData(rpmData, [latestData.rpm]);
+    updateUPlotData(speedData, [latestData.speed]);
+    updateUPlotData(voltageData, [latestData.pack_voltage]);
+    updateUPlotData(motorData, [latestData.id, latestData.iq]);
+    updateUPlotData(imuData, [emaAx, emaAy, emaAz, latestData.ax, latestData.ay, latestData.az]);
     if(latestData.throttle_pedal !== undefined) {
-        updateUPlotData(driverData, [latestData.throttle_pedal, latestData.brake_pressure], latestData.timestamp);
+        updateUPlotData(driverData, [latestData.throttle_pedal, latestData.brake_pressure]);
     }
     
     // FOC Scatter
@@ -336,25 +341,14 @@ function processFrame(frameData) {
     if(focHistoryX.length > 3000) {
         focHistoryX.shift(); focHistoryId.shift(); focHistoryIq.shift();
     }
-    focData[0].x = focHistoryX.slice();
-    focData[0].y = focHistoryId.slice();
-    focData[1].x = focHistoryX.slice();
-    focData[1].y = focHistoryIq.slice();
-}
-
-let isDirtyUPlot = false;
-let isDirtyPlotly10Hz = false;
-let isDirtyPlotly4Hz = false;
-
-function renderAllCharts() {
-    isDirtyUPlot = true;
-    isDirtyPlotly10Hz = true;
-    isDirtyPlotly4Hz = true;
-}
-
-// 60FPS loop for fast uPlot charts and 10Hz minimap
-function loopFast() {
-    if (isDirtyUPlot) {
+    focData[0].x = focHistoryX;
+    focData[0].y = focHistoryId;
+    focData[1].x = focHistoryX;
+    focData[1].y = focHistoryIq;
+    
+    renderCounter++;
+    if (renderCounter % 2 === 0) {
+        // uPlot 렌더링
         if(rpmPlot) rpmPlot.setData(rpmData);
         if(speedPlot) speedPlot.setData(speedData);
         if(motorPlot) motorPlot.setData(motorData);
@@ -362,64 +356,14 @@ function loopFast() {
         if(imuPlot) imuPlot.setData(imuData);
         if(driverPlot) driverPlot.setData(driverData);
         if(thermalsPlot) thermalsPlot.setData(thermalsData);
-        isDirtyUPlot = false;
+        
+        // Plotly 렌더링
+        Plotly.react('gpsChart', gpsData, gpsLayout);
+        Plotly.react('ggChart', ggData, ggLayout);
+        Plotly.react('heatmapChart', heatmapData, heatmapLayout);
+        Plotly.react('focChart', focData, focLayout);
     }
-    if (isDirtyPlotly10Hz) {
-        const activeTab = document.querySelector('.tab-btn.active').dataset.target;
-        if (activeTab === 'all' || activeTab === 'gps') {
-            Plotly.react('gpsChart', gpsData, gpsLayout);
-        }
-        isDirtyPlotly10Hz = false;
-    }
-    requestAnimationFrame(loopFast);
-}
-requestAnimationFrame(loopFast);
-
-// 4FPS Throttle for heavy Plotly WebGL charts (Heatmap, FOC, GG)
-setInterval(() => {
-    if (isDirtyPlotly4Hz) {
-        const activeTab = document.querySelector('.tab-btn.active').dataset.target;
-        if (activeTab === 'all' || activeTab === 'gg') {
-            Plotly.react('ggChart', ggData, ggLayout);
-            Plotly.react('focChart', focData, focLayout);
-        }
-        if (activeTab === 'all' || activeTab === 'thermals') {
-            Plotly.react('heatmapChart', heatmapData, heatmapLayout);
-        }
-        isDirtyPlotly4Hz = false;
-    }
-}, 250);
-
-// Theme Toggle
-const themeToggle = document.getElementById('theme-toggle');
-let isLightMode = false;
-themeToggle.addEventListener('click', () => {
-    isLightMode = !isLightMode;
-    document.body.classList.toggle('light-mode', isLightMode);
-    themeToggle.textContent = isLightMode ? '🌙' : '☀️';
-    
-    const textColor = isLightMode ? '#475569' : '#94a3b8';
-    const gridColor = isLightMode ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)';
-    
-    const update = {
-        'font.color': textColor,
-        'xaxis.gridcolor': gridColor,
-        'yaxis.gridcolor': gridColor
-    };
-    
-    Plotly.relayout('gpsChart', update);
-    Plotly.relayout('ggChart', update);
-    Plotly.relayout('heatmapChart', update);
-    Plotly.relayout('focChart', update);
-    
-    uPlots.forEach(p => {
-        if(p.axes && p.axes[1]) {
-            p.axes[1].stroke = textColor;
-            p.axes[1].grid.stroke = gridColor;
-        }
-        p.redraw(false);
-    });
-});
+}, 50);
 
 // WebSocket
 const WS_URL = 'wss://gef27test.store/ws?token=GBungE-FSAE-token';
@@ -435,9 +379,9 @@ function connectWebSocket() {
             const data = JSON.parse(event.data);
             if(Array.isArray(data)) {
                 for (const frame of data) {
-                    if (frame.rpm !== undefined) processFrame(frame);
+                    if (frame.rpm !== undefined) playoutQueue.push(frame);
                 }
-                renderAllCharts();
+                if (playoutQueue.length > 20) playoutQueue = playoutQueue.slice(playoutQueue.length - 20);
             }
         } catch (e) {}
     };
@@ -447,3 +391,7 @@ function connectWebSocket() {
     };
 }
 connectWebSocket();
+"""
+
+with open(r'./app.js', 'w', encoding='utf-8') as f:
+    f.write(app_code)
