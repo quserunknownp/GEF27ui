@@ -11,13 +11,21 @@
     <div class="dashboard-container">
         <header class="top-bar">
             <h1 class="logo">FSAE <span>TELEMETRY</span></h1>
-            <div style="display: flex; align-items: center; gap: 15px;">
+            <div class="status-cluster">
                 <div id="loss-status" class="status-badge" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); color: #ef4444;">
                     Total Loss: <span id="loss-count">0</span>
                 </div>
+                <div id="device-status" class="status-badge waiting" title="Waiting for a valid UDP telemetry frame">
+                    <span class="pulse-dot"></span>
+                    <span class="status-text">DEVICE UNKNOWN</span>
+                </div>
+                <div id="monolith-status" class="status-badge waiting" title="Monolith UART state is unknown">
+                    <span class="pulse-dot"></span>
+                    <span class="status-text">MONOLITH UNKNOWN</span>
+                </div>
                 <div id="connection-status" class="status-badge disconnected">
                     <span class="pulse-dot"></span>
-                    <span class="status-text">Connecting...</span>
+                    <span class="status-text">SERVER CONNECTING</span>
                 </div>
                 <button id="theme-toggle" class="tab-btn" style="border-radius: 50%; width: 40px; height: 40px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer;">
                     ☀️

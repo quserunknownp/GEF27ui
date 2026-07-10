@@ -425,25 +425,166 @@ themeToggle.addEventListener('click', () => {
 const WS_URL = 'wss://gef27test.store/ws?token=GBungE-FSAE-token';
 const statusBadge = document.getElementById('connection-status');
 const statusText = statusBadge.querySelector('.status-text');
+const deviceBadge = document.getElementById('device-status');
+const deviceStatusText = deviceBadge.querySelector('.status-text');
+const monolithBadge = document.getElementById('monolith-status');
+const monolithStatusText = monolithBadge.querySelector('.status-text');
+const DEVICE_SIGNAL_TIMEOUT_MS = 3000;
+const SERVER_HEARTBEAT_TIMEOUT_MS = 5000;
+const MONOLITH_RUNNING_FLAG = 1 << 0;
 let ws;
+let reconnectTimer = null;
+let serverConnected = false;
+let serverConnectedAt = 0;
+let lastServerHeartbeatAt = 0;
+let lastTelemetryFrameAt = 0;
+let lastTelemetryStatusFlags = null;
+let serverReportedDeviceState = null;
+
+function setSignalBadge(badge, textNode, state, text, title) {
+    badge.className = `status-badge ${state}`;
+    textNode.textContent = text;
+    badge.title = title;
+}
+
+function refreshSignalStatus() {
+    if (!serverConnected) {
+        setSignalBadge(deviceBadge, deviceStatusText, 'waiting', 'DEVICE UNKNOWN', 'Server WebSocket is disconnected');
+        setSignalBadge(monolithBadge, monolithStatusText, 'waiting', 'MONOLITH UNKNOWN', 'Server WebSocket is disconnected');
+        return;
+    }
+
+    const now = Date.now();
+    if (lastServerHeartbeatAt && now - lastServerHeartbeatAt > SERVER_HEARTBEAT_TIMEOUT_MS) {
+        statusBadge.className = 'status-badge waiting';
+        statusText.textContent = 'SERVER STALE';
+        setSignalBadge(deviceBadge, deviceStatusText, 'waiting', 'DEVICE UNKNOWN', 'Server heartbeat is stale');
+        setSignalBadge(monolithBadge, monolithStatusText, 'waiting', 'MONOLITH UNKNOWN', 'Server heartbeat is stale');
+        return;
+    }
+
+    if (!lastTelemetryFrameAt) {
+        const waitingMs = now - serverConnectedAt;
+        if (serverReportedDeviceState === 'no_signal') {
+            setSignalBadge(deviceBadge, deviceStatusText, 'disconnected', 'DEVICE NO SIGNAL', 'Server reports that valid UDP telemetry is stale');
+        } else if (waitingMs <= DEVICE_SIGNAL_TIMEOUT_MS) {
+            setSignalBadge(deviceBadge, deviceStatusText, 'waiting', 'DEVICE WAITING', 'Waiting for the first valid telemetry frame');
+        } else {
+            const label = serverReportedDeviceState === 'never_seen' ? 'DEVICE NEVER SEEN' : 'DEVICE NO SIGNAL';
+            setSignalBadge(deviceBadge, deviceStatusText, 'disconnected', label, `No valid telemetry frame for ${(waitingMs / 1000).toFixed(1)} s`);
+        }
+        setSignalBadge(monolithBadge, monolithStatusText, 'waiting', 'MONOLITH UNKNOWN', 'No live device frame is available');
+        return;
+    }
+
+    const frameAgeMs = now - lastTelemetryFrameAt;
+    if (frameAgeMs > DEVICE_SIGNAL_TIMEOUT_MS) {
+        setSignalBadge(deviceBadge, deviceStatusText, 'disconnected', 'DEVICE NO SIGNAL', `Last valid frame was ${(frameAgeMs / 1000).toFixed(1)} s ago`);
+        setSignalBadge(monolithBadge, monolithStatusText, 'waiting', 'MONOLITH UNKNOWN', 'Device telemetry is stale');
+        return;
+    }
+
+    setSignalBadge(deviceBadge, deviceStatusText, 'connected', 'DEVICE UDP LIVE', `Last valid frame was ${(frameAgeMs / 1000).toFixed(1)} s ago`);
+    if (lastTelemetryStatusFlags === null) {
+        setSignalBadge(monolithBadge, monolithStatusText, 'waiting', 'MONOLITH UNKNOWN', 'status_flags is missing');
+    } else if ((lastTelemetryStatusFlags & MONOLITH_RUNNING_FLAG) !== 0) {
+        setSignalBadge(monolithBadge, monolithStatusText, 'connected', 'MONOLITH UART LIVE', 'Fresh Monolith UART data is present');
+    } else {
+        setSignalBadge(monolithBadge, monolithStatusText, 'disconnected', 'MONOLITH NO UART', 'ESP/LTE is live, but Monolith UART data is stale or absent');
+    }
+}
+
+function markTelemetryFrame(frame) {
+    lastTelemetryFrameAt = Date.now();
+    lastTelemetryStatusFlags = Number.isInteger(frame.status_flags) ? frame.status_flags : null;
+    serverReportedDeviceState = null;
+    refreshSignalStatus();
+}
+
+function applyServerStatus(message) {
+    lastServerHeartbeatAt = Date.now();
+    serverConnected = true;
+    statusBadge.className = 'status-badge connected';
+    statusText.textContent = 'SERVER LIVE';
+
+    const device = message.device;
+    if (device && typeof device === 'object') {
+        lastTelemetryStatusFlags = Number.isInteger(device.last_status_flags) ? device.last_status_flags : null;
+        if (device.device_alive) {
+            const ageSeconds = Number(device.last_packet_age_seconds);
+            const ageMs = Number.isFinite(ageSeconds) ? Math.max(0, ageSeconds * 1000) : 0;
+            lastTelemetryFrameAt = Date.now() - ageMs;
+            serverReportedDeviceState = null;
+        } else {
+            lastTelemetryFrameAt = 0;
+            serverReportedDeviceState = typeof device.state === 'string' ? device.state : 'no_signal';
+        }
+    }
+    refreshSignalStatus();
+}
+
+function scheduleReconnect() {
+    if (reconnectTimer !== null) return;
+    reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        connectWebSocket();
+    }, 3000);
+}
 
 function connectWebSocket() {
+    if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return;
     ws = new WebSocket(WS_URL);
-    ws.onopen = () => { statusBadge.className = 'status-badge connected'; statusText.textContent = 'LIVE'; };
+    ws.onopen = () => {
+        serverConnected = true;
+        serverConnectedAt = Date.now();
+        lastServerHeartbeatAt = Date.now();
+        lastTelemetryFrameAt = 0;
+        lastTelemetryStatusFlags = null;
+        serverReportedDeviceState = null;
+        statusBadge.className = 'status-badge connected';
+        statusText.textContent = 'SERVER LIVE';
+        refreshSignalStatus();
+    };
     ws.onmessage = (event) => {
+        lastServerHeartbeatAt = Date.now();
+        statusBadge.className = 'status-badge connected';
+        statusText.textContent = 'SERVER LIVE';
         try {
             const data = JSON.parse(event.data);
             if(Array.isArray(data)) {
+                let renderedFrames = 0;
                 for (const frame of data) {
-                    if (frame.rpm !== undefined) processFrame(frame);
+                    if (frame && frame.rpm !== undefined) {
+                        markTelemetryFrame(frame);
+                        try {
+                            processFrame(frame);
+                            renderedFrames++;
+                        } catch (frameError) {
+                            console.error('Telemetry frame render failed:', frameError, frame);
+                        }
+                    }
                 }
-                renderAllCharts();
+                if (renderedFrames > 0) renderAllCharts();
+            } else if (data && data.type === 'server_status') {
+                applyServerStatus(data);
             }
-        } catch (e) {}
+        } catch (error) {
+            console.error('WebSocket message parse failed:', error, event.data);
+        }
+    };
+    ws.onerror = (error) => {
+        console.error('WebSocket transport error:', error);
     };
     ws.onclose = () => {
-        statusBadge.className = 'status-badge disconnected'; statusText.textContent = 'RECONNECTING...';
-        setTimeout(connectWebSocket, 3000);
+        serverConnected = false;
+        lastServerHeartbeatAt = 0;
+        serverReportedDeviceState = null;
+        ws = null;
+        statusBadge.className = 'status-badge disconnected';
+        statusText.textContent = 'SERVER RECONNECTING';
+        refreshSignalStatus();
+        scheduleReconnect();
     };
 }
+setInterval(refreshSignalStatus, 250);
 connectWebSocket();

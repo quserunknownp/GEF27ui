@@ -8,10 +8,12 @@
     --accent-blue: #38bdf8;
     --accent-red: #f43f5e;
     --accent-green: #10b981;
+    --accent-yellow: #f59e0b;
     
     --glow-blue: rgba(56, 189, 248, 0.4);
     --glow-red: rgba(244, 63, 94, 0.4);
     --glow-green: rgba(16, 185, 129, 0.4);
+    --glow-yellow: rgba(245, 158, 11, 0.35);
 }
 
 body.light-mode {
@@ -67,6 +69,14 @@ body {
     border-bottom: 1px solid var(--panel-border);
 }
 
+.status-cluster {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
 .logo {
     font-family: 'Outfit', sans-serif;
     font-size: 2rem;
@@ -118,6 +128,16 @@ body {
 }
 .status-badge.disconnected .pulse-dot {
     background-color: var(--accent-red);
+}
+
+.status-badge.waiting {
+    color: var(--accent-yellow);
+    border-color: var(--accent-yellow);
+    box-shadow: 0 0 8px var(--glow-yellow);
+}
+.status-badge.waiting .pulse-dot {
+    background-color: var(--accent-yellow);
+    box-shadow: 0 0 6px var(--accent-yellow);
 }
 
 @keyframes pulse {
